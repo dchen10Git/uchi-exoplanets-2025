@@ -135,13 +135,16 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years
     saves the new state of the sim and returns the data as a Pandas DataFrame.
     '''
     # Set up times for integration & data collection
-    n_out = int(years / 5) + 1000 # number of data points to collect
+    n_out = 2000 # number of data points to collect
     stage_times = np.linspace(start_time, years+start_time, n_out, endpoint=False)  # all times to integrate over
     stage_data = {name : data_df(n_out, stage_times) for name in planet_names[:num_planets]}
     
     tstart = time()
     stop_sim = False
     
+    # For showing progress
+    percents = np.linspace(0, n_out, int(n_out/100), endpoint=False) # n_out should be multiple of 100
+
     for i, t in enumerate(stage_times): 
         sim.dt = planets[0].P / 20 # 1/20 of planet b
         sim.integrate(t)
@@ -164,26 +167,33 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years
                 
                 if np.abs(current_a_vals[p] - current_a_vals[p+1]) < 5*r_hill:
                     stop_sim = True
-                    print("Close encounter")
+                    print("\nClose encounter")
                 
             # Stop sim if planet goes into star
             if planets[p].a < 0.001:
                 stop_sim = True
-                print("Planet collided with star")
+                print("\nPlanet collided with star")
         
         # Prevent stop in data collection        
         if type(stage_data['b']["a"][i]) != np.float64:
             stop_sim = True
-            print(f"Stopped collecting data at t={t}")
+            print(f"\nStopped collecting data at t={t}")
         
         if stop_sim:
-            print(f"Stopped integration at t={t}")
+            print(f"\nStopped integration at t={t}")
             break
         
+        # Show progress
+        if i in percents:
+            print(f"Integration: {int(100*i/n_out)}% completed", end='\r', flush=True)
+        
+        if i == n_out-1:
+            print("Integration: 100% completed", end='\r', flush=True)
+            
     if not stop_sim:
-        print(f'Integrated to {(years+start_time)/1000} kyrs in {time()-tstart:.4} sec')
+        print(f'\nIntegrated to {(years+start_time)/1000} kyrs in {time()-tstart:.4} sec')
     else:
-        print(f'Time elapsed: {time()-tstart:.4} sec')
+        print(f'\nTime elapsed: {time()-tstart:.4} sec')
     
     return stage_data
    
@@ -214,7 +224,7 @@ def concatenate_data(stages):
 
 def save_simulation_run(stage_data,
                         sim_id,
-                        filename="simulation_data.h5",
+                        file_path,
                         sim_metadata=None):
     """
     Save all planets from one simulation run into HDF5.
@@ -228,8 +238,7 @@ def save_simulation_run(stage_data,
     sim_metadata : dict (optional)
         e.g. {"m_star": 1.0, "integrator": "ias15"}
     """
-    
-    with pd.HDFStore(filename, mode="a") as store:
+    with pd.HDFStore(file_path, mode="a") as store:
         
         sim_group = f"/sim_{sim_id}"
         
@@ -254,7 +263,7 @@ def save_simulation_run(stage_data,
             storer.attrs.planet_name = planet_name
             storer.attrs.sim_id = sim_id
            
-def load_simulation_run(sim_id, filename="simulation_data.h5"):
+def load_simulation_run(sim_id, file_path):
     '''
     Given sim_id and filename of hdf5, returns the result (dict of dataframes)
     and the metadata (containing planet_name, sim_id, ide params, etc.)
@@ -262,7 +271,7 @@ def load_simulation_run(sim_id, filename="simulation_data.h5"):
     sim_group = f"/sim_{sim_id}"
     result = {}
     
-    with pd.HDFStore(filename, mode="r") as store:
+    with pd.HDFStore(file_path, mode="r") as store:
         
         planet_list = store[f"{sim_group}/planet_list"].tolist()
         
@@ -331,11 +340,10 @@ def plot_trappist1(sim_data, t_units='kyr'):
     plt.suptitle("TRAPPIST-1 evolution")
     plt.tight_layout(); plt.show()
 
-def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, planet_names, filename="simulation_data.h5"):
+def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, planet_names, years, file_path):
     '''
     Given initial parameters, returns the outcome of the simulation.
     '''
-    
     # Create the simulation
     sim = rebound.Simulation()
     sim.units = ('AU', 'yr', 'Msun')
@@ -363,9 +371,9 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     a_vals = (P_vals**2 * m_star)**(1/3)
 
     print("Initial period ratios:")
-    print(np.round(initial_P_ratios, decimals=4))
-    print("\nInitial period values (yr):")
-    print(np.round(P_vals, decimals=4))
+    print(np.round(initial_P_ratios, decimals=4), end='\n\n')
+    print("Initial period values (yr):")
+    print(np.round(P_vals, decimals=4), end='\n\n')
     # print("\nInitial semimajor axis values (AU):")
     # print(np.round(a_vals, decimals=4))
 
@@ -379,8 +387,8 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     planets = ps[1:] # for easier indexing
     
     h = get_h(K_factor) # here, h = h_1au since there is no flaring
-    print(f"h_1au: {float(h):.4g}")
-    print(f"tau_a of b: {float(get_taus(a_b, m_vals, m_star, h, get_Sigma(Sigma_1au, a_b))[0][0]):.3e}")
+    print(f"h_1au: {float(h):.4g} \n")
+    print(f"tau_a of b: {float(get_taus(a_b, m_vals, m_star, h, get_Sigma(Sigma_1au, a_b))[0][0]):.3e} \n")
     
     rebx = reboundx.Extras(sim)
     mig = rebx.load_force("type_I_migration")
@@ -397,18 +405,17 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     mig.params["ide_position"] = 0.023 # inner disk edge
     mig.params["ide_width"] = 2*h*mig.params["ide_position"]
     
-    years = 100
     data = integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years, start_time=0)
 
     all_data = concatenate_data((data))
     
-    save_simulation_run(all_data, sim_id=0, filename=filename, sim_metadata={
+    save_simulation_run(all_data, sim_id=0, file_path=file_path, sim_metadata={
                         "m_star": m_star, 
                         "num_planets": num_planets, 
                         "ide_position": mig.params["ide_position"],
                         "ide_width": mig.params["ide_width"]
                         })
 
-    saved_sim = load_simulation_run(sim_id=0, filename="simulation_data.h5")
+    saved_sim = load_simulation_run(sim_id=0, file_path=file_path)
     
     return saved_sim
