@@ -6,6 +6,7 @@ import pandas as pd
 import pickle
 import scipy
 import matplotlib.pyplot as plt
+import mmr_id
 from time import time
 from astropy import constants as const
 from astropy import units as u
@@ -19,6 +20,7 @@ yr = u.yr.to(u.s)
 r_earth = u.earthRad.to(u.AU)
 m_earth = u.Mearth.to(u.Msun)
 r_sun = u.Rsun.to(u.AU) 
+G = 4*np.pi**2 # in yr, AU, Msun
 
 def parse_entry(entry):
     """
@@ -63,10 +65,9 @@ def parse_entry(entry):
     
     raise ValueError(f"Could not parse entry: {entry}")
 
-def generate_params(csv_file, params, n_samples=1):
+def generate_params_from_csv(csv_file, params):
     """
-    Reads planet parameter CSV and returns Monte Carlo samples
-    for mass, radius, and semimajor axis.
+    Reads parameter CSV and returns randomly drawn params.
     """
     
     df = pd.read_csv(csv_file)
@@ -84,7 +85,7 @@ def generate_params(csv_file, params, n_samples=1):
         mu, sigma = parse_entry(df.loc[param, col])
     
         # Draw Gaussian samples
-        samples  = np.random.normal(mu, sigma, n_samples)
+        samples  = np.random.normal(mu, sigma)
 
         # Add to dict
         params_dict[param] = samples
@@ -96,18 +97,16 @@ def get_taus(a_vals, m_vals, M_star, h, Sigma, alpha=1.5):
     Computes damping timescales based on current semimajor axis values.
     
     Parameters:
-        a_vals: 1D NumPy array of current semimajor axis values.
+        a_vals - 1D NumPy array of current semimajor axis values.
     
     Returns:
-        tau_a: semimajor axis damping timescale.
-        tau_e: eccentricity damping timescale.
+        tau_a - semimajor axis damping timescale.
+        
+        tau_e - eccentricity damping timescale.
     '''
-    tau_a = (1/(2.7+1.1*alpha)) * (M_star/m_vals) * (M_star/(Sigma*a_vals**2)) * (h**2 / np.sqrt(const.G.value*M_star/a_vals**3))
-    tau_e = (1/0.780) * (M_star/m_vals) * (M_star/(Sigma*a_vals**2)) * (h**4 / np.sqrt(const.G.value*M_star/a_vals**3))
+    tau_a = (1/(2.7+1.1*alpha)) * (M_star/m_vals) * (M_star/(Sigma*a_vals**2)) * (h**2 / np.sqrt(G*M_star/a_vals**3))
+    tau_e = (1/0.780) * (M_star/m_vals) * (M_star/(Sigma*a_vals**2)) * (h**4 / np.sqrt(G*M_star/a_vals**3))
     return tau_a, tau_e
-
-def get_Sigma(a_vals, Sigma_1au, alpha=1.5):
-    return Sigma_1au * a_vals**(-alpha)
 
 def get_h(K, alpha=1.5):
     return np.sqrt(0.780/(2.7+1.1*alpha)/K)
@@ -132,19 +131,18 @@ def data_df(n_out, times):
 def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years, start_time=0):
     '''
     Integrates a REBOUND simulation over a given number of years,
-    saves the new state of the sim and returns the data as a Pandas DataFrame.
+    saves the new state of the sim and returns the data as a Pandas DataFrame. 
+    Also returns whether the integration completed as a bool.
     '''
     # Set up times for integration & data collection
     n_out = 2000 # number of data points to collect
     stage_times = np.linspace(start_time, years+start_time, n_out, endpoint=False)  # all times to integrate over
     stage_data = {name : data_df(n_out, stage_times) for name in planet_names[:num_planets]}
-    
-    tstart = time()
-    stop_sim = False
-    
-    # For showing progress
-    percents = np.linspace(0, n_out, int(n_out/100), endpoint=False) # n_out should be multiple of 100
+    sim.random_seed = 13741154 # for reproducibility
 
+    tstart = time()
+    completed_sim = True
+    
     for i, t in enumerate(stage_times): 
         sim.dt = planets[0].P / 20 # 1/20 of planet b
         sim.integrate(t)
@@ -166,36 +164,42 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years
                 r_hill = get_hill_radius(m_vals[p], current_a_vals[p], m_vals[p+1], current_a_vals[p+1], m_star)
                 
                 if np.abs(current_a_vals[p] - current_a_vals[p+1]) < 5*r_hill:
-                    stop_sim = True
-                    print("\nClose encounter")
+                    print(f"Close encounter at t={t}")
+                    completed_sim = False
+                    break
+                    
+                # Also stop sim if planets crossed each other(P_ratio < 1)
+                if planets[p+1].P / planets[p].P < 1:
+                    print(f"Planets crossed each other at t={t}")
+                    completed_sim = False
+                    break
                 
             # Stop sim if planet goes into star
             if planets[p].a < 0.001:
-                stop_sim = True
-                print("\nPlanet collided with star")
+                print(f"Planet collided with star at t={t}")
+                completed_sim = False
+                break
         
         # Prevent stop in data collection        
         if type(stage_data['b']["a"][i]) != np.float64:
-            stop_sim = True
-            print(f"\nStopped collecting data at t={t}")
-        
-        if stop_sim:
-            print(f"\nStopped integration at t={t}")
+            print(f"Stopped collecting data at t={t}")
+            completed_sim = False
             break
         
         # Show progress
-        if i in percents:
-            print(f"Integration: {int(100*i/n_out)}% completed", end='\r', flush=True)
+        print(f"Integrating step {i}/{n_out} ({int(100*i/n_out)}% completed)", end='\r', flush=True)
         
         if i == n_out-1:
-            print("Integration: 100% completed", end='\r', flush=True)
-            
-    if not stop_sim:
-        print(f'\nIntegrated to {(years+start_time)/1000} kyrs in {time()-tstart:.4} sec')
-    else:
-        print(f'\nTime elapsed: {time()-tstart:.4} sec')
-    
-    return stage_data
+            print("\rIntegration: 100% completed")
+
+        # Stop simulation early if failed
+        if not completed_sim:
+            break
+        
+    if completed_sim:
+        print(f'Integrated to {(years+start_time)/1000:.4} kyrs in {time()-tstart:.4} sec')        
+
+    return stage_data, completed_sim
    
 def concatenate_data(stages):
     if type(stages) == dict:
@@ -340,9 +344,23 @@ def plot_trappist1(sim_data, t_units='kyr'):
     plt.suptitle("TRAPPIST-1 evolution")
     plt.tight_layout(); plt.show()
 
-def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, planet_names, years, file_path):
+def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, planet_names, sim_id, file_path):
     '''
-    Given initial parameters, returns the outcome of the simulation.
+    Given initial parameters. planet_names, sim_id, and file_path, 
+    simulates the TRAPPIST-1 system, saves the data, and returns
+    score depending on the outcome:
+    
+        -1: incomplete simulation
+        
+        0: partial chain
+        
+        1: 2BRC with all 1st order pairs
+        
+        2: 2BRC with at least one 2nd order but no 3rd order
+        
+        3: 2BRC with at least one 3rd order
+        
+        1x: Complete 3BRC
     '''
     # Create the simulation
     sim = rebound.Simulation()
@@ -364,16 +382,16 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     a_b = 0.05
 
     # Define initial periods (P) and semimajor axes (a)
-    P_vals = (a_b**3 / m_star)**(1/2)
+    P_vals = [(a_b**3 / m_star)**(1/2)]
     for i in range(num_planets-1):
         P_vals = np.append(P_vals, P_vals[i] * initial_P_ratios[i])
         
     a_vals = (P_vals**2 * m_star)**(1/3)
 
-    print("Initial period ratios:")
-    print(np.round(initial_P_ratios, decimals=4), end='\n\n')
-    print("Initial period values (yr):")
-    print(np.round(P_vals, decimals=4), end='\n\n')
+    # print("Initial period ratios:")
+    # print(np.round(initial_P_ratios, decimals=4), end='\n\n')
+    # print("Initial period values (yr):")
+    # print(np.round(P_vals, decimals=4), end='\n\n')
     # print("\nInitial semimajor axis values (AU):")
     # print(np.round(a_vals, decimals=4))
 
@@ -387,8 +405,16 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     planets = ps[1:] # for easier indexing
     
     h = get_h(K_factor) # here, h = h_1au since there is no flaring
-    print(f"h_1au: {float(h):.4g} \n")
-    print(f"tau_a of b: {float(get_taus(a_b, m_vals, m_star, h, get_Sigma(Sigma_1au, a_b))[0][0]):.3e} \n")
+    # print(f"h_1au: {float(h):.4} \n")
+    
+    # See initial tau_a values
+    Sigmas = get_Sigma(Sigma_1au, a_vals)
+    initial_tau_a_vals = get_taus(a_vals, m_vals, m_star, h, Sigmas)[0]
+    # print(f"tau_a values: {np.round(initial_tau_a_vals)} yr \n")
+    
+    years = np.clip(2*initial_tau_a_vals[-1], 20000, 10000000) # Integrate for 2 tau_a of the last planet (Keller does 3), with 
+                                                               # lower limit 30 kyr and upper limit 10 Myr
+    print(f"Integrating {years/1000:.4} kyrs \n")
     
     rebx = reboundx.Extras(sim)
     mig = rebx.load_force("type_I_migration")
@@ -405,17 +431,26 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     mig.params["ide_position"] = 0.023 # inner disk edge
     mig.params["ide_width"] = 2*h*mig.params["ide_position"]
     
-    data = integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years, start_time=0)
-
-    all_data = concatenate_data((data))
+    data, complete_sim = integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years, start_time=0)
     
-    save_simulation_run(all_data, sim_id=0, file_path=file_path, sim_metadata={
-                        "m_star": m_star, 
+    # Save data
+    save_simulation_run(data, sim_id, file_path, sim_metadata={
                         "num_planets": num_planets, 
+                        "planet_names": planet_names,
                         "ide_position": mig.params["ide_position"],
-                        "ide_width": mig.params["ide_width"]
+                        "ide_width": mig.params["ide_width"],
+                        "m_vals": m_vals,
+                        "r_vals": r_vals,
+                        "m_star": m_star,
+                        "r_star": r_star,
+                        "initial_P_ratios": initial_P_ratios,
+                        "Sigma_1au": Sigma_1au,
+                        "K_factor": K_factor
                         })
-
-    saved_sim = load_simulation_run(sim_id=0, file_path=file_path)
     
-    return saved_sim
+    if complete_sim:
+        # Analyze RC and compute outcome score
+        saved_sim = load_simulation_run(sim_id, file_path)
+        return mmr_id.res_chain_score(saved_sim)
+    else:
+        return -1
