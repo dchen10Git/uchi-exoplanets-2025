@@ -65,7 +65,7 @@ def parse_entry(entry):
     
     raise ValueError(f"Could not parse entry: {entry}")
 
-def generate_params_from_csv(csv_file, params):
+def generate_params_from_csv(csv_file, params, random=False):
     """
     Reads parameter CSV and returns randomly drawn params.
     """
@@ -84,8 +84,11 @@ def generate_params_from_csv(csv_file, params):
         # Parse parameter
         mu, sigma = parse_entry(df.loc[param, col])
     
-        # Draw Gaussian samples
-        samples  = np.random.normal(mu, sigma)
+        # Draw Gaussian samples if we want them to be random
+        if random:
+            samples  = np.random.normal(mu, sigma)
+        else:
+            samples  = mu
 
         # Add to dict
         params_dict[param] = samples
@@ -187,17 +190,16 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years
             break
         
         # Show progress
-        print(f"Integrating step {i}/{n_out} ({int(100*i/n_out)}% completed)", end='\r', flush=True)
-        
-        if i == n_out-1:
-            print("\rIntegration: 100% completed")
+        print(f"Integrating step {i}/{n_out} ({int(100*i/n_out)+1}% completed)", end='\r', flush=True)
 
         # Stop simulation early if failed
         if not completed_sim:
             break
         
     if completed_sim:
-        print(f'Integrated to {(years+start_time)/1000:.4} kyrs in {time()-tstart:.4} sec')        
+        print(f'Integrated to {(years+start_time)/1000:.4} kyrs in {time()-tstart:.4} sec')   
+    else:
+        print(f'Time elapsed: {time()-tstart:.4} sec')    
 
     return stage_data, completed_sim
    
@@ -412,7 +414,7 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     initial_tau_a_vals = get_taus(a_vals, m_vals, m_star, h, Sigmas)[0]
     # print(f"tau_a values: {np.round(initial_tau_a_vals)} yr \n")
     
-    years = np.clip(2*initial_tau_a_vals[-1], 20000, 10000000) # Integrate for 2 tau_a of the last planet (Keller does 3), with 
+    years = np.clip(initial_tau_a_vals[-1], 20000, 10000000) # Integrate for tau_a of the last planet (Keller does 3*tau_a), with 
                                                                # lower limit 30 kyr and upper limit 10 Myr
     print(f"Integrating {years/1000:.4} kyrs \n")
     
