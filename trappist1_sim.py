@@ -165,27 +165,26 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years
                 # Stop sim if separation within 5*r_hill
                 # (since symplectic integrators are not designed to handle close encounters)
                 r_hill = get_hill_radius(m_vals[p], current_a_vals[p], m_vals[p+1], current_a_vals[p+1], m_star)
-                
                 if np.abs(current_a_vals[p] - current_a_vals[p+1]) < 5*r_hill:
-                    print(f"Close encounter at t={t}")
+                    print(f"Close encounter at t={t}                                         ")
                     completed_sim = False
                     break
                     
                 # Also stop sim if planets crossed each other(P_ratio < 1)
                 if planets[p+1].P / planets[p].P < 1:
-                    print(f"Planets crossed each other at t={t}")
+                    print(f"Planets crossed each other at t={t}                                         ")
                     completed_sim = False
                     break
                 
             # Stop sim if planet goes into star
             if planets[p].a < 0.001:
-                print(f"Planet collided with star at t={t}")
+                print(f"Planet collided with star at t={t}                                         ")
                 completed_sim = False
                 break
         
-        # Prevent stop in data collection        
-        if type(stage_data['b']["a"][i]) != np.float64:
-            print(f"Stopped collecting data at t={t}")
+        # Prevent stop in data collection       
+        if np.isnan(stage_data['b']["a"][i]):
+            print(f"nan data at t={t}                                         ")
             completed_sim = False
             break
         
@@ -197,9 +196,9 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years
             break
         
     if completed_sim:
-        print(f'Integrated to {(years+start_time)/1000:.4} kyrs in {time()-tstart:.4} sec')   
+        print(f'Integrated to {(years+start_time)/1000:.4} kyrs in {time()-tstart:.4} sec                     ')   
     else:
-        print(f'Time elapsed: {time()-tstart:.4} sec')    
+        print(f'Time elapsed: {time()-tstart:.4} sec                                         ')    
 
     return stage_data, completed_sim
    
