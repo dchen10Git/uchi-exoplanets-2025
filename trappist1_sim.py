@@ -3,8 +3,6 @@ import rebound
 import reboundx
 import numpy as np
 import pandas as pd
-import pickle
-import scipy
 import matplotlib.pyplot as plt
 import mmr_id
 from time import time
@@ -166,39 +164,39 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years
                 # (since symplectic integrators are not designed to handle close encounters)
                 r_hill = get_hill_radius(m_vals[p], current_a_vals[p], m_vals[p+1], current_a_vals[p+1], m_star)
                 if np.abs(current_a_vals[p] - current_a_vals[p+1]) < 5*r_hill:
-                    print(f"Close encounter at t={t}                                         ")
+                    # print(f"Close encounter at t={t}                                         ")
                     completed_sim = False
                     break
                     
                 # Also stop sim if planets crossed each other(P_ratio < 1)
                 if planets[p+1].P / planets[p].P < 1:
-                    print(f"Planets crossed each other at t={t}                                         ")
+                    # print(f"Planets crossed each other at t={t}                                         ")
                     completed_sim = False
                     break
                 
             # Stop sim if planet goes into star
             if planets[p].a < 0.001:
-                print(f"Planet collided with star at t={t}                                         ")
+                # print(f"Planet collided with star at t={t}                                         ")
                 completed_sim = False
                 break
         
         # Prevent stop in data collection       
         if np.isnan(stage_data['b']["a"][i]):
-            print(f"nan data at t={t}                                         ")
+            # print(f"nan data at t={t}                                         ")
             completed_sim = False
             break
         
         # Show progress
-        print(f"Integrating step {i}/{n_out} ({int(100*i/n_out)+1}% completed)", end='\r', flush=True)
+        # print(f"Integrating step {i}/{n_out} ({int(100*i/n_out)+1}% completed)", end='\r', flush=True)
 
         # Stop simulation early if failed
         if not completed_sim:
             break
         
-    if completed_sim:
-        print(f'Integrated to {(years+start_time)/1000:.4} kyrs in {time()-tstart:.4} sec                     ')   
-    else:
-        print(f'Time elapsed: {time()-tstart:.4} sec                                         ')    
+    # if completed_sim:
+    #     print(f'Integrated to {(years+start_time)/1000:.4} kyrs in {time()-tstart:.4} sec                     ')   
+    # else:
+    #     print(f'Time elapsed: {time()-tstart:.4} sec                                         ')    
 
     return stage_data, completed_sim
    
@@ -415,7 +413,7 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     
     years = np.clip(initial_tau_a_vals[-1], 20000, 10000000) # Integrate for tau_a of the last planet (Keller does 3*tau_a), with 
                                                                # lower limit 30 kyr and upper limit 10 Myr
-    print(f"Integrating {years/1000:.4} kyrs \n")
+    # print(f"Integrating {years/1000:.4} kyrs \n")
     
     rebx = reboundx.Extras(sim)
     mig = rebx.load_force("type_I_migration")
@@ -434,6 +432,12 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     
     data, complete_sim = integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years, start_time=0)
     
+    score = -1
+    if complete_sim:
+        # Analyze RC and compute outcome score
+        saved_sim = load_simulation_run(sim_id, file_path)
+        score = mmr_id.res_chain_score(saved_sim)
+    
     # Save data
     save_simulation_run(data, sim_id, file_path, sim_metadata={
                         "num_planets": num_planets, 
@@ -446,12 +450,8 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
                         "r_star": r_star,
                         "initial_P_ratios": initial_P_ratios,
                         "Sigma_1au": Sigma_1au,
-                        "K_factor": K_factor
+                        "K_factor": K_factor,
+                        "outcome": score
                         })
     
-    if complete_sim:
-        # Analyze RC and compute outcome score
-        saved_sim = load_simulation_run(sim_id, file_path)
-        return mmr_id.res_chain_score(saved_sim)
-    else:
-        return -1
+    return score

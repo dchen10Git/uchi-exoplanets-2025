@@ -1,0 +1,11 @@
+regex
+rebound
+reboundx
+numpy
+pandas
+matplotlib
+astropy
+warnings
+scipy
+pickle
+pathlib

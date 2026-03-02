@@ -1,9 +1,8 @@
-# Multiprocessing version of the trappist1_keller.ipynb notebook
+# Slow, un-multithreaded version of run_trappist1_sims. Can be helpful for testing.
 
 import numpy as np
 import pandas as pd
 import scipy
-import multiprocessing
 import matplotlib.pyplot as plt
 import pickle
 import trappist1_sim as t1
@@ -55,41 +54,38 @@ def generate_params(planet_names):
                                 
     return m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor
 
-planet_names = ['b', 'c', 'd', 'e', 'f', 'g']
+planet_names = ['b', 'c']
 
 # Set where to save the data
 base_dir = Path.cwd()
-dataset_id = 4
-file_path = base_dir.parent / "sim_results" / f"simulation_data{dataset_id}.h5"
+file_path = "test_sim.h5"
+
+tstart = time()
+
+n_sims = 1
+outcomes = []
+for i in range(n_sims):
+    sim_id = i
     
-def run_sim(sim_id):
     # Get random param values
     m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor = generate_params(planet_names)
     
+    # Set custom initial conditions (for debugging)
+    initial_P_ratios = [1.5]
+    Sigma_1au = 1.5e-05
+    K_factor = 10
+    
     # Sim integration!
     outcome = t1.simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, planet_names, sim_id, file_path)
-    print(f"Sim ID: {sim_id:<2d} | Outcome: {outcome}")
-    return outcome
+    outcomes.append(outcome)
+    print(f"Sim ID: {sim_id} | Outcome: {outcome}")
     
-n_sims = 100
+with open("test_sim.pkl", "wb") as f:
+    pickle.dump(outcomes, f)
+    
+with open("test_sim.pkl", "rb") as f:
+    sim_outcomes = pickle.load(f)
 
-if __name__ == "__main__":
-    tstart = time()
-    
-    # Create a pool of worker processes
-    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-        # Map the simulation function to the sim_id's
-        outcomes = pool.map(run_sim, range(n_sims))
-    
-    # Save the outcomes
-    with open(f"trappist1_sim_outcomes{dataset_id}.pkl", "wb") as f:
-        pickle.dump(outcomes, f)
-        print(f"Saved to trappist1_sim_outcomes{dataset_id}.pkl")
-    
-    # Load to verify
-    with open(f"trappist1_sim_outcomes{dataset_id}.pkl", "rb") as f:
-        sim_outcomes = pickle.load(f)
-    
-    # print(sim_outcomes)
-    
-    print(f'Time elapsed: {time()-tstart:.4} sec')
+# print(sim_outcomes)
+
+print(f'Time elapsed: {time()-tstart:.4} sec')

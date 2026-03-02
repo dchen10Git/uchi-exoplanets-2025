@@ -6,5 +6,16 @@
 #SBATCH --account=pi-fabrycky
 #SBATCH --mem-per-cpu=8192
 
+echo Script started.
+
 module load Anaconda3
+
+echo Loaded Anaconda3.
+
+pip install -r --dchen10 requirements.txt
+
+echo Requirements installed.
+
 python run_trappist1_sims.py
+
+echo Finished running.
