@@ -58,22 +58,22 @@ planet_names = ['b', 'c']
 
 # Set where to save the data
 base_dir = Path.cwd()
-file_path = "test_sim.h5"
-
 tstart = time()
+dataset_id = 0
 
-n_sims = 1
+n_sims = 100
 outcomes = []
 for i in range(n_sims):
     sim_id = i
+    file_path = base_dir.parent / "sim_results" / f"dataset{dataset_id}" / f"sim{sim_id}.h5"
     
     # Get random param values
     m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor = generate_params(planet_names)
     
     # Set custom initial conditions (for debugging)
-    initial_P_ratios = [1.5]
-    Sigma_1au = 1.5e-05
-    K_factor = 10
+    # initial_P_ratios = [1.5]
+    # Sigma_1au = 1.5e-05
+    # K_factor = 10
     
     # Sim integration!
     outcome = t1.simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, planet_names, sim_id, file_path)

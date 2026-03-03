@@ -141,7 +141,6 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years
     stage_data = {name : data_df(n_out, stage_times) for name in planet_names[:num_planets]}
     sim.random_seed = 13741154 # for reproducibility
 
-    tstart = time()
     completed_sim = True
     
     for i, t in enumerate(stage_times): 
@@ -164,25 +163,21 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years
                 # (since symplectic integrators are not designed to handle close encounters)
                 r_hill = get_hill_radius(m_vals[p], current_a_vals[p], m_vals[p+1], current_a_vals[p+1], m_star)
                 if np.abs(current_a_vals[p] - current_a_vals[p+1]) < 5*r_hill:
-                    # print(f"Close encounter at t={t}                                         ")
                     completed_sim = False
                     break
                     
                 # Also stop sim if planets crossed each other(P_ratio < 1)
                 if planets[p+1].P / planets[p].P < 1:
-                    # print(f"Planets crossed each other at t={t}                                         ")
                     completed_sim = False
                     break
                 
             # Stop sim if planet goes into star
             if planets[p].a < 0.001:
-                # print(f"Planet collided with star at t={t}                                         ")
                 completed_sim = False
                 break
         
         # Prevent stop in data collection       
         if np.isnan(stage_data['b']["a"][i]):
-            # print(f"nan data at t={t}                                         ")
             completed_sim = False
             break
         
@@ -193,11 +188,6 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years
         if not completed_sim:
             break
         
-    # if completed_sim:
-    #     print(f'Integrated to {(years+start_time)/1000:.4} kyrs in {time()-tstart:.4} sec                     ')   
-    # else:
-    #     print(f'Time elapsed: {time()-tstart:.4} sec                                         ')    
-
     return stage_data, completed_sim
    
 def concatenate_data(stages):
@@ -242,23 +232,20 @@ def save_simulation_run(stage_data,
         e.g. {"m_star": 1.0, "integrator": "ias15"}
     """
     with pd.HDFStore(file_path, mode="a") as store:
-        
-        sim_group = f"/sim_{sim_id}"
-        
         # Save planet list
         planet_list = list(stage_data.keys())
-        store.put(f"{sim_group}/planet_list",
+        store.put("planet_list",
                   pd.Series(planet_list))
         
         # Save simulation metadata
         if sim_metadata is not None:
-            store.put(f"{sim_group}/metadata",
+            store.put("metadata",
                       pd.Series(sim_metadata))
         
         # Save each planet
         for planet_name, df in stage_data.items():
             
-            key = f"{sim_group}/{planet_name}"
+            key = f"{planet_name}"
             store.put(key, df, format="table")
             
             # Attach attributes
@@ -271,15 +258,14 @@ def load_simulation_run(sim_id, file_path):
     Given sim_id and filename of hdf5, returns the result (dict of dataframes)
     and the metadata (containing planet_name, sim_id, ide params, etc.)
     '''
-    sim_group = f"/sim_{sim_id}"
     result = {}
     
     with pd.HDFStore(file_path, mode="r") as store:
         
-        planet_list = store[f"{sim_group}/planet_list"].tolist()
+        planet_list = store["planet_list"].tolist()
         
         for planet_name in planet_list:
-            key = f"{sim_group}/{planet_name}"
+            key = f"{planet_name}"
             df = store[key]
             
             # Pull HDF5 attributes
@@ -289,7 +275,7 @@ def load_simulation_run(sim_id, file_path):
             
             result[planet_name] = df
         
-        metadata = store[f"{sim_group}/metadata"].to_dict()
+        metadata = store[f"metadata"].to_dict()
     
     return result, metadata
 
@@ -414,6 +400,7 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     years = np.clip(initial_tau_a_vals[-1], 20000, 10000000) # Integrate for tau_a of the last planet (Keller does 3*tau_a), with 
                                                                # lower limit 30 kyr and upper limit 10 Myr
     # print(f"Integrating {years/1000:.4} kyrs \n")
+    years = 1000
     
     rebx = reboundx.Extras(sim)
     mig = rebx.load_force("type_I_migration")
@@ -432,12 +419,6 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     
     data, complete_sim = integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years, start_time=0)
     
-    score = -1
-    if complete_sim:
-        # Analyze RC and compute outcome score
-        saved_sim = load_simulation_run(sim_id, file_path)
-        score = mmr_id.res_chain_score(saved_sim)
-    
     # Save data
     save_simulation_run(data, sim_id, file_path, sim_metadata={
                         "num_planets": num_planets, 
@@ -451,7 +432,11 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
                         "initial_P_ratios": initial_P_ratios,
                         "Sigma_1au": Sigma_1au,
                         "K_factor": K_factor,
-                        "outcome": score
                         })
-    
-    return score
+
+    if complete_sim:
+        # Analyze RC and compute outcome score
+        saved_sim = load_simulation_run(sim_id, file_path)
+        return mmr_id.res_chain_score(saved_sim)
+    else:
+        return -1

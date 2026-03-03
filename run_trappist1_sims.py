@@ -55,23 +55,24 @@ def generate_params(planet_names):
                                 
     return m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor
 
-planet_names = ['b', 'c', 'd', 'e', 'f', 'g']
+planet_names = ['b', 'c', 'd', 'e', 'f', 'g'] # h-less sytem
 
 # Set where to save the data
 base_dir = Path.cwd()
-dataset_id = 4
-file_path = base_dir.parent / "sim_results" / f"simulation_data{dataset_id}.h5"
-    
+dataset_id = 0
+
 def run_sim(sim_id):
+    file_path = base_dir.parent / "sim_results" / f"dataset{dataset_id}" / f"sim{sim_id}.h5"
+    
     # Get random param values
     m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor = generate_params(planet_names)
     
     # Sim integration!
     outcome = t1.simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, planet_names, sim_id, file_path)
     print(f"Sim ID: {sim_id:<2d} | Outcome: {outcome}")
-    return outcome
+    return (sim_id, m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, outcome)
     
-n_sims = 100
+n_sims = 2
 
 if __name__ == "__main__":
     tstart = time()
@@ -82,14 +83,15 @@ if __name__ == "__main__":
         outcomes = pool.map(run_sim, range(n_sims))
     
     # Save the outcomes
-    with open(f"trappist1_sim_outcomes{dataset_id}.pkl", "wb") as f:
+    outcome_file = f"../sim_results/dataset{dataset_id}/outcomes.pkl"
+    with open(f"../sim_results/dataset{dataset_id}/outcomes.pkl", "wb") as f:
         pickle.dump(outcomes, f)
-        print(f"Saved to trappist1_sim_outcomes{dataset_id}.pkl")
+        print(f"Saved to {outcome_file}")
     
     # Load to verify
-    with open(f"trappist1_sim_outcomes{dataset_id}.pkl", "rb") as f:
+    with open(outcome_file, "rb") as f:
         sim_outcomes = pickle.load(f)
     
     # print(sim_outcomes)
     
-    print(f'Time elapsed: {time()-tstart:.4} sec')
+    print(f'Time elapsed: {np.round(time()-tstart)} sec')
