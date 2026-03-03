@@ -253,9 +253,9 @@ def save_simulation_run(stage_data,
             storer.attrs.planet_name = planet_name
             storer.attrs.sim_id = sim_id
            
-def load_simulation_run(sim_id, file_path):
+def load_simulation_run(file_path):
     '''
-    Given sim_id and filename of hdf5, returns the result (dict of dataframes)
+    Given filename of hdf5 (containing data for one run), returns the result (dict of dataframes)
     and the metadata (containing planet_name, sim_id, ide params, etc.)
     '''
     result = {}
@@ -400,7 +400,6 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     years = np.clip(initial_tau_a_vals[-1], 20000, 10000000) # Integrate for tau_a of the last planet (Keller does 3*tau_a), with 
                                                                # lower limit 30 kyr and upper limit 10 Myr
     # print(f"Integrating {years/1000:.4} kyrs \n")
-    years = 1000
     
     rebx = reboundx.Extras(sim)
     mig = rebx.load_force("type_I_migration")
