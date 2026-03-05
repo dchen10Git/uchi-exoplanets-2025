@@ -320,9 +320,15 @@ def plot_trappist1(sim_data, t_units='kyr'):
     ax1.grid(True); ax2.grid(True); ax3.grid(True)
     
     # Add horizontal lines for resonances
-    resonances = [2, 3/2, 4/3, 5/3, 5/4]
-    for r in resonances:
+    resonances_1 = [2/1, 3/2, 4/3, 5/4]
+    resonances_2 = [3/1, 5/3, 7/5]
+    resonances_3 = [4/1, 5/2, 7/4, 8/5]
+    for r in resonances_1:
         ax3.axhline(r, color='gray', ls='--', alpha=0.7)
+    for r in resonances_2:
+        ax3.axhline(r, color='blue', ls='--', alpha=0.5)
+    # for r in resonances_3:
+    #     ax3.axhline(r, color='red', ls='--', alpha=0.5)
 
     fig.subplots_adjust(hspace=0)
 
@@ -333,19 +339,7 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     '''
     Given initial parameters. planet_names, sim_id, and file_path, 
     simulates the TRAPPIST-1 system, saves the data, and returns
-    score depending on the outcome:
-    
-        -1: incomplete simulation
-        
-        0: partial chain
-        
-        1: 2BRC with all 1st order pairs
-        
-        2: 2BRC with at least one 2nd order but no 3rd order
-        
-        3: 2BRC with at least one 3rd order
-        
-        1x: Complete 3BRC
+    list depending on the outcome. 
     '''
     # Create the simulation
     sim = rebound.Simulation()
@@ -400,6 +394,7 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     years = np.clip(initial_tau_a_vals[-1], 20000, 10000000) # Integrate for tau_a of the last planet (Keller does 3*tau_a), with 
                                                                # lower limit 30 kyr and upper limit 10 Myr
     # print(f"Integrating {years/1000:.4} kyrs \n")
+    # years = 1000 # for testing only
     
     rebx = reboundx.Extras(sim)
     mig = rebx.load_force("type_I_migration")
@@ -433,9 +428,9 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
                         "K_factor": K_factor,
                         })
 
+    saved_sim = load_simulation_run(file_path)
+    outcome = mmr_id.res_chain_outcome(saved_sim)
     if complete_sim:
-        # Analyze RC and compute outcome score
-        saved_sim = load_simulation_run(sim_id, file_path)
-        return mmr_id.res_chain_score(saved_sim)
+        return outcome
     else:
-        return -1
+        return np.full_like(outcome, -1)

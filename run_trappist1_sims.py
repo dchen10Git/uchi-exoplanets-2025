@@ -1,11 +1,12 @@
 # Multiprocessing version of the trappist1_keller.ipynb notebook
+# To run, use python3 -W ignore run_trappist1_sims.py
 
 import numpy as np
 import pandas as pd
 import scipy
 import multiprocessing
 import matplotlib.pyplot as plt
-import pickle
+import pickle as pkl
 import trappist1_sim as t1
 import mmr_id
 from time import time
@@ -57,11 +58,13 @@ def generate_params(planet_names):
 
 planet_names = ['b', 'c', 'd', 'e', 'f', 'g'] # h-less sytem
 
-# Set where to save the data
-base_dir = Path.cwd()
-dataset_id = 0
+# Remember to change these before running each time
+dataset_id = 2
+n_sims = 200
 
 def run_sim(sim_id):
+    # Set where to save the data
+    base_dir = Path.cwd()
     file_path = base_dir.parent / "sim_results" / f"dataset{dataset_id}" / f"sim{sim_id}.h5"
     
     # Get random param values
@@ -72,9 +75,8 @@ def run_sim(sim_id):
     print(f"Sim ID: {sim_id:<2d} | Outcome: {outcome}")
     return (sim_id, m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, outcome)
     
-n_sims = 2
-
 if __name__ == "__main__":
+    print(f"Dataset: {dataset_id}")
     tstart = time()
     
     # Create a pool of worker processes
@@ -85,12 +87,12 @@ if __name__ == "__main__":
     # Save the outcomes
     outcome_file = f"../sim_results/dataset{dataset_id}/outcomes.pkl"
     with open(f"../sim_results/dataset{dataset_id}/outcomes.pkl", "wb") as f:
-        pickle.dump(outcomes, f)
+        pkl.dump(outcomes, f)
         print(f"Saved to {outcome_file}")
     
     # Load to verify
     with open(outcome_file, "rb") as f:
-        sim_outcomes = pickle.load(f)
+        sim_outcomes = pkl.load(f)
     
     # print(sim_outcomes)
     

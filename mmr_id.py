@@ -10,7 +10,7 @@ Formulas used from section 2.3 in Keller et al. (2026).
 Alternatively, we can use zeta as given in Eq. 11 in Fabrycky et al. (2014) to determine the period ratio.
 '''
 
-def find_best_twoBR_pq(m_star, b, c, p_max=7, crit="Delta"):
+def find_best_twoBR_pq(m_star, b, c, p_max=10, crit="Delta"):
     '''Finds the best values for p and q at the end of simulation for 
        two planets given some MMR criterion'''
     if crit == 'Delta':
@@ -39,7 +39,7 @@ def find_best_twoBR_pq(m_star, b, c, p_max=7, crit="Delta"):
                     
     return best_p, best_q
 
-def find_best_threeBR_pq(m_star, b, c, d, p_max=7, crit="Delta"):
+def find_best_threeBR_pq(m_star, b, c, d, p_max=10, crit="Delta"):
     best_p_bc, best_q_bc = find_best_twoBR_pq(m_star, b, c, p_max, crit)
     best_p_cd, best_q_cd = find_best_twoBR_pq(m_star, c, d, p_max, crit)          
     return best_p_bc, best_q_bc, best_p_cd, best_q_cd
@@ -155,54 +155,36 @@ def check_resonance(m_star, b, c, d=None, N=100):
             else:
                 return ((0,0), (0,0))
 
-def res_chain_order(saved_sim, N=100):
+def res_chain_orders(saved_sim, N=100):
     '''
-    Given m_star and list of planet dataframes and planet_names in order, returns the highest order
-    of the RC if the chain is complete, 0 otherwise.
+    Given m_star and list of planet dataframes and planet_names in order, returns the list of 
+    resonance orders of the RC. 
     '''
     sim_data = saved_sim[0]
     m_star = saved_sim[1]['m_star']
     planet_names = saved_sim[1]['planet_names']
     planets = {p: sim_data[p] for p in planet_names}
     
-    highest_order = 0
+    orders = []
     for i in range(len(planets)-1):
         b_name = planet_names[i]
         c_name = planet_names[i+1]
         res = check_resonance(m_star, planets[b_name], planets[c_name], N=N)
-        order = res[0] - res[1]
-        
-        if order > highest_order:
-            highest_order = order
-        
-        if order == 0: # RC is not complete
-            return 0
+        orders.append(res[0] - res[1])
             
-    return highest_order
+    return orders
 
-def res_chain_score(saved_sim, N=100):
+def res_chain_outcome(saved_sim, N=100):
     '''
-    Given saved_sim, returns score based on outcome:
+    Given saved_sim, returns list based on outcome.
     
-        -1: incomplete simulation
-        
-        0: partial chain
-        
-        1: 2BRC with all 1st order pairs
-        
-        2: 2BRC with at least one 2nd order but no 3rd order
-        
-        3: 2BRC with at least one 3rd order
-        
-        1x: Complete 3BRC
-    '''
+    Returns a list: whether full 3BRC exists (1 or 0)& list of 2BR orders
+     '''
     sim_data = saved_sim[0]
     m_star = saved_sim[1]['m_star']
     planet_names = saved_sim[1]['planet_names']
     planets = {p: sim_data[p] for p in planet_names}        
-    
-    score = 0
-    
+        
     # Check existence of a full three-body chain
     threeBRC = True
     for i in range(len(planet_names)-2):
@@ -214,11 +196,5 @@ def res_chain_score(saved_sim, N=100):
             threeBRC = False
             break
             
-    if threeBRC:
-        score += 10
-    
-    # Add order of 2BRC to score
-    score += res_chain_order(saved_sim, N)
-
-    return score
+    return [int(threeBRC)] + res_chain_orders(saved_sim, N)
     

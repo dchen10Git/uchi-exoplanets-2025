@@ -17,7 +17,7 @@ def build_fg_library(p_max, q_max):
 
     return fg_library
 
-fg_lib = build_fg_library(p_max=10, q_max=7)
+fg_lib = build_fg_library(p_max=10, q_max=10)
 print("fg library created")
 with open("fg_library.pkl", "wb") as f:
     pickle.dump(fg_lib, f)
