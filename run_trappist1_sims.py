@@ -45,6 +45,9 @@ def generate_params(planet_names):
     initial_P_ratios = np.random.lognormal(0.6, 0.2, size=len(planet_names)-1) 
                                         # In Keller, 0.703 & 0.313
                                         
+    # NOTE: This is set to simplify the current problem
+    initial_P_ratios = np.full(len(planet_names)-1, 1.8)
+                                        
     # Draw surface density at 1au from log uniform
     Sigma_1au = scipy.stats.loguniform.rvs(a=50, b=1000, size=1) # in g/cm^2
                                 # In Keller, 10 & 10000
@@ -59,8 +62,8 @@ def generate_params(planet_names):
 planet_names = ['b', 'c', 'd', 'e', 'f', 'g'] # h-less sytem
 
 # Remember to change these before running each time
-dataset_id = 2
-n_sims = 200
+dataset_id = 7
+n_sims = 2000
 
 def run_sim(sim_id):
     # Set where to save the data
