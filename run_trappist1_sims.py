@@ -100,3 +100,13 @@ if __name__ == "__main__":
     # print(sim_outcomes)
     
     print(f'Time elapsed: {np.round(time()-tstart)} sec')
+    
+    
+'''
+Dataset documentation
+
+test: for testing
+0-1: single value outcome
+2-6: vectorized outcome
+7: period ratios kept constant at 1.8 for all
+'''
