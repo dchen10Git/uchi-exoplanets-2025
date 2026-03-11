@@ -62,7 +62,7 @@ def generate_params(planet_names):
 planet_names = ['b', 'c', 'd', 'e', 'f', 'g'] # h-less sytem
 
 # Remember to change these before running each time
-dataset_id = 7
+dataset_id = 8
 n_sims = 2000
 
 def run_sim(sim_id):
