@@ -31,6 +31,11 @@ def generate_params(planet_names):
     
     # Define planet masses (m)
     m_vals = np.array([planet_params[planet_name]['Mp (M⨁)'] for planet_name in planet_names])
+
+    # m_vals[0] = np.random.uniform(1, 1.5) # (actual observed is 1.37 M_earth) # random b mass
+    # m_vals[1] = np.random.uniform(1, 1.5) # (actual observed is 1.31 M_earth) # random c mass
+    m_vals[2] = np.random.uniform(0.2, 0.6) # (actual observed is 0.39 M_earth) # random d mass
+    
     m_vals *= m_earth # convert to Msun
 
     # Define planet radii (r)
@@ -62,7 +67,7 @@ def generate_params(planet_names):
 planet_names = ['b', 'c', 'd', 'e', 'f', 'g'] # h-less sytem
 
 # Remember to change these before running each time
-dataset_id = 9
+dataset_id = 10
 n_sims = 2000
 
 def run_sim(sim_id):
@@ -106,7 +111,11 @@ if __name__ == "__main__":
 Dataset documentation
 
 test: for testing
-0-1: single value outcome
-2-6: vectorized outcome
-7: period ratios kept constant at 1.8 for all
+0-1: params: K, Sigma1au, P_ratios; outcome: single value
+2-6: params: K, Sigma1au, P_ratios; outcome: vectorized
+7: params: K, Sigma1au; P_ratios kept constant at 1.8 for all; outcome: vectorized
+8: params: K, Sigma1au; P_ratios kept constant at 1.9 for all; outcome: vectorized
+9-10: params: K, Sigma1au, mass of d; outcome: vectorized
+11: params: K, Sigma1au, masses of b, c, & d; P_ratios kept constant at 1.8 for all; outcome: vectorized
+12: params: K, Sigma1au, P_ratios in U(1.8, 1.9); outcome: vectorized
 '''

@@ -65,7 +65,8 @@ def parse_entry(entry):
 
 def generate_params_from_csv(csv_file, params, random=False):
     """
-    Reads parameter CSV and returns randomly drawn params.
+    Reads parameter CSV downloaded from the NASA Exoplanet archive of
+    TRAPPIST-1 parameters and returns randomly drawn params.
     """
     
     df = pd.read_csv(csv_file)
@@ -84,9 +85,9 @@ def generate_params_from_csv(csv_file, params, random=False):
     
         # Draw Gaussian samples if we want them to be random
         if random:
-            samples  = np.random.normal(mu, sigma)
+            samples = np.random.normal(mu, sigma)
         else:
-            samples  = mu
+            samples = mu
 
         # Add to dict
         params_dict[param] = samples
