@@ -32,9 +32,9 @@ def generate_params(planet_names):
     # Define planet masses (m)
     m_vals = np.array([planet_params[planet_name]['Mp (M⨁)'] for planet_name in planet_names])
 
-    # m_vals[0] = np.random.uniform(1, 1.5) # (actual observed is 1.37 M_earth) # random b mass
-    # m_vals[1] = np.random.uniform(1, 1.5) # (actual observed is 1.31 M_earth) # random c mass
-    m_vals[2] = np.random.uniform(0.2, 0.6) # (actual observed is 0.39 M_earth) # random d mass
+    # m_vals[0] = np.random.uniform(1, 1.5) # (actual observed is 1.37 M_earth) random b mass
+    # m_vals[1] = np.random.uniform(1, 1.5) # (actual observed is 1.31 M_earth) random c mass
+    m_vals[2] = np.random.uniform(1.3, 1.7) # (actual observed is 0.39 M_earth) random d mass
     
     m_vals *= m_earth # convert to Msun
 
@@ -115,7 +115,9 @@ test: for testing
 2-6: params: K, Sigma1au, P_ratios; outcome: vectorized
 7: params: K, Sigma1au; P_ratios kept constant at 1.8 for all; outcome: vectorized
 8: params: K, Sigma1au; P_ratios kept constant at 1.9 for all; outcome: vectorized
-9-10: params: K, Sigma1au, mass of d; outcome: vectorized
-11: params: K, Sigma1au, masses of b, c, & d; P_ratios kept constant at 1.8 for all; outcome: vectorized
+9: params: K, Sigma1au, mass of d in U(0,2, 0.6); P_ratios kept constant at 1.9 for all; outcome: vectorized
+10: params: K, Sigma1au, mass of d in U(0.4, 1.3); P_ratios kept constant at 1.9 for all; outcome: vectorized
+11: params: K, Sigma1au, mass of d in U(1.3), 1.7); P_ratios kept constant at 1.9 for all; outcome: vectorized
 12: params: K, Sigma1au, P_ratios in U(1.8, 1.9); outcome: vectorized
+13: params: K, Sigma1au, masses of b, c, & d; P_ratios kept constant at 1.8 for all; outcome: vectorized
 '''
