@@ -12,6 +12,10 @@ module load Anaconda3
 
 echo Loaded Anaconda3.
 
+conda activate myenv
+
+echo Environment activated.
+
 pip install -r --dchen10 requirements.txt
 
 echo Requirements installed.

@@ -34,7 +34,7 @@ def generate_params(planet_names):
 
     # m_vals[0] = np.random.uniform(1, 1.5) # (actual observed is 1.37 M_earth) random b mass
     # m_vals[1] = np.random.uniform(1, 1.5) # (actual observed is 1.31 M_earth) random c mass
-    m_vals[2] = np.random.uniform(1.3, 1.7) # (actual observed is 0.39 M_earth) random d mass
+    # m_vals[2] = np.random.uniform(1.3, 1.7) # (actual observed is 0.39 M_earth) random d mass
     
     m_vals *= m_earth # convert to Msun
 
@@ -47,11 +47,14 @@ def generate_params(planet_names):
     r_star = stellar_params['R✶ (R⦿)'] * r_sun
 
     # Draw initial ratios from log normal
-    initial_P_ratios = np.random.lognormal(0.6, 0.2, size=len(planet_names)-1) 
-                                        # In Keller, 0.703 & 0.313
+    # initial_P_ratios = np.random.lognormal(0.6, 0.2, size=len(planet_names)-1) 
+    #                                     # In Keller, 0.703 & 0.313
                                         
-    # NOTE: This is set to simplify the current problem
-    initial_P_ratios = np.full(len(planet_names)-1, 1.9)
+    # # Constant period ratios
+    # initial_P_ratios = np.full(len(planet_names)-1, 1.9)
+    
+    # Uniform random just above 2:1
+    initial_P_ratios = np.random.uniform(2.05, 2.1, size=len(planet_names)-1) 
                                         
     # Draw surface density at 1au from log uniform
     Sigma_1au = scipy.stats.loguniform.rvs(a=50, b=1000, size=1) # in g/cm^2
@@ -67,8 +70,8 @@ def generate_params(planet_names):
 planet_names = ['b', 'c', 'd', 'e', 'f', 'g'] # h-less sytem
 
 # Remember to change these before running each time
-dataset_id = 10
-n_sims = 2000
+dataset_id = 12
+n_sims = 1
 
 def run_sim(sim_id):
     # Set where to save the data
@@ -84,6 +87,17 @@ def run_sim(sim_id):
     return (sim_id, m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, outcome)
     
 if __name__ == "__main__":
+    dataset_dir = Path.cwd().parent / "sim_results" / f"dataset{dataset_id}"
+    
+    # Ensure dataset_id not taken already
+    if dataset_dir.exists():
+        print(f"Error: dataset{dataset_id} already exists. Change dataset_id before running.")
+        exit(1)
+    
+    # Create the folder
+    dataset_dir.mkdir(parents=True, exist_ok=False)
+    print(f"Created directory: {dataset_dir}")
+
     print(f"Dataset: {dataset_id}")
     tstart = time()
     
@@ -117,7 +131,7 @@ test: for testing
 8: params: K, Sigma1au; P_ratios kept constant at 1.9 for all; outcome: vectorized
 9: params: K, Sigma1au, mass of d in U(0,2, 0.6); P_ratios kept constant at 1.9 for all; outcome: vectorized
 10: params: K, Sigma1au, mass of d in U(0.4, 1.3); P_ratios kept constant at 1.9 for all; outcome: vectorized
-11: params: K, Sigma1au, mass of d in U(1.3), 1.7); P_ratios kept constant at 1.9 for all; outcome: vectorized
-12: params: K, Sigma1au, P_ratios in U(1.8, 1.9); outcome: vectorized
+11: params: K, Sigma1au, mass of d in U(1.3, 1.7); P_ratios kept constant at 1.9 for all; outcome: vectorized
+12: params: K, Sigma1au, P_ratios in U(2.05, 2.1); outcome: vectorized
 13: params: K, Sigma1au, masses of b, c, & d; P_ratios kept constant at 1.8 for all; outcome: vectorized
 '''
