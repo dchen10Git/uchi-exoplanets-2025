@@ -198,3 +198,179 @@ def res_chain_outcome(saved_sim, N=100):
             
     return [int(threeBRC)] + res_chain_orders(saved_sim, N)
     
+    
+def detect_sequential_capture(saved_sim, N_window=100, amp_threshold=90):
+    '''
+    Detects whether higher-order resonances formed sequentially by analyzing
+    the time evolution of resonant angles.
+    
+    For each adjacent pair, scans through time to detect:
+    1. Initial capture into first-order resonance (libration amp < threshold)
+    2. Breaking of that resonance (amp rises above threshold)
+    3. Re-capture into higher-order resonance (amp drops below threshold again)
+    
+    Returns a dict with results for each pair.
+    '''
+    sim_data = saved_sim[0]
+    m_star = saved_sim[1]['m_star']
+    planet_names = saved_sim[1]['planet_names']
+    planets = {p: sim_data[p] for p in planet_names}
+    
+    results = {}
+    
+    for i in range(len(planet_names) - 1):
+        b_name = planet_names[i]
+        c_name = planet_names[i+1]
+        b = planets[b_name]
+        c = planets[c_name]
+        pair_name = f"{b_name}/{c_name}"
+        
+        # Find best final p, q for this pair
+        p_final, q_final = find_best_twoBR_pq(m_star, b, c)
+        final_order = p_final - q_final
+        
+        # Scan through time using sliding windows
+        n_times = len(b)
+        times = b['time'].to_numpy()
+        
+        # For each p/q up to the final order, compute resonant angle time series
+        # and track libration amplitude over time
+        capture_history = []  # list of (time, p, q, amp) when transitions occur
+        
+        # Check 1st order resonances first, then up to final order
+        orders_to_check = list(range(1, final_order + 1)) if final_order > 0 else [1]
+        
+        for order in orders_to_check:
+            # Find the best p,q for this order
+            best_p, best_q = None, None
+            best_Delta = 100
+            for p in range(order+1, 10+1):
+                q = p - order
+                if q < 1:
+                    continue
+                P_b = (b['a'].iloc[-1]**3 / m_star) ** (1/2)
+                P_c = (c['a'].iloc[-1]**3 / m_star) ** (1/2)
+                Delta = abs((P_c / P_b) / (p / q) - 1)
+                if Delta < best_Delta:
+                    best_Delta = Delta
+                    best_p, best_q = p, q
+            
+            if best_p is None:
+                continue
+            
+            # Compute resonant angle at each timestep
+            angles = np.rad2deg(twoBR_angle(b, c, best_p, best_q)) % 360
+            
+            # Slide a window across time and compute libration amplitude
+            amps = []
+            window_times = []
+            for t in range(N_window, n_times):
+                amp = libration_amp(angles, N_window) if t == n_times - 1 else \
+                      np.sqrt(2/N_window * np.sum((angles[t-N_window:t] - 
+                              np.mean(angles[t-N_window:t]))**2))
+                amps.append(amp)
+                window_times.append(times[t])
+            
+            amps = np.array(amps)
+            window_times = np.array(window_times)
+            
+            # Detect transitions: librating -> not librating -> librating
+            librating = amps < amp_threshold
+            transitions = np.diff(librating.astype(int))
+            capture_times = window_times[1:][transitions == 1]   # entered libration
+            breaking_times = window_times[1:][transitions == -1] # broke out of libration
+            
+            capture_history.append({
+                'order': order,
+                'p': best_p,
+                'q': best_q,
+                'capture_times': capture_times,
+                'breaking_times': breaking_times,
+                'amps': amps,
+                'times': window_times,
+                'librating': librating
+            })
+        
+        # Determine if sequential capture occurred:
+        # A first-order resonance was captured, then broken, then higher order formed
+        sequential = False
+        sequence_description = []
+        
+        if len(capture_history) >= 2:
+            for j in range(len(capture_history) - 1):
+                low_order = capture_history[j]
+                high_order = capture_history[j + 1]
+                
+                # Check: low order was captured, then broken, then high order captured
+                if (len(low_order['capture_times']) > 0 and 
+                    len(low_order['breaking_times']) > 0 and
+                    len(high_order['capture_times']) > 0):
+                    
+                    t_cap_low = low_order['capture_times'][0]
+                    t_break_low = low_order['breaking_times'][0]  
+                    t_cap_high = high_order['capture_times'][0]
+                    
+                    if t_cap_low < t_break_low < t_cap_high:
+                        sequential = True
+                        sequence_description.append(
+                            f"{low_order['p']}/{low_order['q']} captured at t={t_cap_low:.0f}, "
+                            f"broken at t={t_break_low:.0f}, "
+                            f"{high_order['p']}/{high_order['q']} captured at t={t_cap_high:.0f}"
+                        )
+        
+        results[pair_name] = {
+            'sequential': sequential,
+            'final_order': final_order,
+            'final_p': p_final,
+            'final_q': q_final,
+            'sequence_description': sequence_description,
+            'capture_history': capture_history
+        }
+    
+    return results
+
+
+def plot_sequential_capture(saved_sim, pair_idx=0, N_window=100):
+    '''
+    Plots the libration amplitude over time for each resonance order
+    for a given planet pair, to visualize sequential capture.
+    '''
+    sim_data = saved_sim[0]
+    planet_names = saved_sim[1]['planet_names']
+    
+    results = detect_sequential_capture(saved_sim, N_window=N_window)
+    pair_name = list(results.keys())[pair_idx]
+    pair_result = results[pair_name]
+    
+    history = pair_result['capture_history']
+    if not history:
+        print(f"No resonance history found for pair {pair_name}")
+        return
+    
+    fig, axes = plt.subplots(len(history), 1, figsize=(10, 3 * len(history)), sharex=True)
+    if len(history) == 1:
+        axes = [axes]
+    
+    for ax, entry in zip(axes, history):
+        ax.plot(entry['times'], entry['amps'], lw=1)
+        ax.axhline(90, color='red', ls='--', alpha=0.7, label='Libration threshold (90°)')
+        
+        for t in entry['capture_times']:
+            ax.axvline(t, color='green', ls=':', alpha=0.8, label='Capture')
+        for t in entry['breaking_times']:
+            ax.axvline(t, color='orange', ls=':', alpha=0.8, label='Breaking')
+        
+        ax.set_ylabel(f"Amp (deg)\n{entry['p']}/{entry['q']} (order {entry['order']})")
+        ax.set_ylim(0, 200)
+        ax.legend(fontsize=7, loc='upper right')
+        ax.grid(True, alpha=0.3)
+    
+    axes[-1].set_xlabel("Time (yrs)")
+    fig.suptitle(f"Sequential Resonance Capture: {pair_name}\n"
+                 f"Sequential: {pair_result['sequential']}\n" + 
+                 '\n'.join(pair_result['sequence_description']),
+                 fontsize=11)
+    plt.tight_layout()
+    plt.show()
+    
+    return results

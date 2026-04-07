@@ -395,7 +395,7 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     years = np.clip(initial_tau_a_vals[-1], 20000, 10000000) # Integrate for tau_a of the last planet (Keller does 3*tau_a), with 
                                                                # lower limit 30 kyr and upper limit 10 Myr
     # print(f"Integrating {years/1000:.4} kyrs \n")
-    # years = 1000 # for testing only
+    # years = 100 # for testing only
     
     rebx = reboundx.Extras(sim)
     mig = rebx.load_force("type_I_migration")

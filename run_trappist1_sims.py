@@ -2,13 +2,10 @@
 # To run, use python3 -W ignore run_trappist1_sims.py
 
 import numpy as np
-import pandas as pd
 import scipy
 import multiprocessing
-import matplotlib.pyplot as plt
 import pickle as pkl
 import trappist1_sim as t1
-import mmr_id
 from time import time
 from astropy import units as u
 from pathlib import Path
@@ -67,11 +64,11 @@ def generate_params(planet_names):
                                 
     return m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor
 
-planet_names = ['b', 'c', 'd', 'e', 'f', 'g'] # h-less sytem
+planet_names = ['b', 'c', 'd', 'e', 'f', 'g']
 
 # Remember to change these before running each time
 dataset_id = 12
-n_sims = 1
+n_sims = 200
 
 def run_sim(sim_id):
     # Set where to save the data
@@ -102,6 +99,7 @@ if __name__ == "__main__":
     tstart = time()
     
     # Create a pool of worker processes
+    print(f"Running sims on {multiprocessing.cpu_count()} processes")
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
         # Map the simulation function to the sim_id's
         outcomes = pool.map(run_sim, range(n_sims))
@@ -132,6 +130,6 @@ test: for testing
 9: params: K, Sigma1au, mass of d in U(0,2, 0.6); P_ratios kept constant at 1.9 for all; outcome: vectorized
 10: params: K, Sigma1au, mass of d in U(0.4, 1.3); P_ratios kept constant at 1.9 for all; outcome: vectorized
 11: params: K, Sigma1au, mass of d in U(1.3, 1.7); P_ratios kept constant at 1.9 for all; outcome: vectorized
-12: params: K, Sigma1au, P_ratios in U(2.05, 2.1); outcome: vectorized
-13: params: K, Sigma1au, masses of b, c, & d; P_ratios kept constant at 1.8 for all; outcome: vectorized
+12: params: K, Sigma1au; P_ratios kept constant at 2.05 for all; outcome: vectorized
+13: params: K, Sigma1au, P_ratios in U(2.05, 2.1); outcome: vectorized
 '''
