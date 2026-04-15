@@ -230,7 +230,7 @@ def save_simulation_run(stage_data,
     sim_id : int
         Simulation ID
     sim_metadata : dict (optional)
-        e.g. {"m_star": 1.0, "integrator": "ias15"}
+        e.g. {"m_star": 1.0, "integrator": "whfast"}
     """
     with pd.HDFStore(file_path, mode="a") as store:
         # Save planet list
@@ -336,16 +336,16 @@ def plot_trappist1(sim_data, t_units='kyr'):
     plt.suptitle("TRAPPIST-1 evolution")
     plt.tight_layout(); plt.show()
 
-def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, planet_names, sim_id, file_path):
+def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, planet_names, sim_id, file_path, integrator="whfast", test=False):
     '''
-    Given initial parameters. planet_names, sim_id, and file_path, 
-    simulates the TRAPPIST-1 system, saves the data, and returns
-    list depending on the outcome. 
+    Given initial parameters. planet_names, sim_id, file_path, and integrator,
+    simulates the TRAPPIST-1 system, saves the data, and returns list depending 
+    on the outcome. 
     '''
     # Create the simulation
     sim = rebound.Simulation()
     sim.units = ('AU', 'yr', 'Msun')
-    sim.integrator = "whfast"
+    sim.integrator = integrator
 
     # Add the star
     sim.add(m=m_star, r=r_star)
@@ -368,13 +368,6 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
         
     a_vals = (P_vals**2 * m_star)**(1/3)
 
-    # print("Initial period ratios:")
-    # print(np.round(initial_P_ratios, decimals=4), end='\n\n')
-    # print("Initial period values (yr):")
-    # print(np.round(P_vals, decimals=4), end='\n\n')
-    # print("\nInitial semimajor axis values (AU):")
-    # print(np.round(a_vals, decimals=4))
-
     # Add planets 
     for i in range(num_planets):
         sim.add(m=m_vals[i], r=r_vals[i], a=a_vals[i], e=e_vals[i], M=M_vals[i])
@@ -392,10 +385,12 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     initial_tau_a_vals = get_taus(a_vals, m_vals, m_star, h, Sigmas)[0]
     # print(f"tau_a values: {np.round(initial_tau_a_vals)} yr \n")
     
-    years = np.clip(initial_tau_a_vals[-1], 20000, 10000000) # Integrate for tau_a of the last planet (Keller does 3*tau_a), with 
+    years = np.clip(2*initial_tau_a_vals[-1], 30000, 10000000) # Integrate for tau_a of the last planet (Keller does 3*tau_a), with 
                                                                # lower limit 30 kyr and upper limit 10 Myr
     # print(f"Integrating {years/1000:.4} kyrs \n")
-    # years = 100 # for testing only
+    
+    if test: # Short simulation for testing purposes
+        years = 100
     
     rebx = reboundx.Extras(sim)
     mig = rebx.load_force("type_I_migration")
@@ -427,6 +422,7 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
                         "initial_P_ratios": initial_P_ratios,
                         "Sigma_1au": Sigma_1au,
                         "K_factor": K_factor,
+                        "integrator": integrator
                         })
 
     saved_sim = load_simulation_run(file_path)

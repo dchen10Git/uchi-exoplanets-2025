@@ -198,7 +198,6 @@ def res_chain_outcome(saved_sim, N=100):
             
     return [int(threeBRC)] + res_chain_orders(saved_sim, N)
     
-    
 def detect_sequential_capture(saved_sim, N_window=100, amp_threshold=90):
     '''
     Detects whether higher-order resonances formed sequentially by analyzing

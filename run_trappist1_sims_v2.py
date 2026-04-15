@@ -1,11 +1,12 @@
 # Multiprocessing version of the trappist1_keller.ipynb notebook
-# To run, use python3 -W ignore run_trappist1_sims.py
+# To run, use python3 -W ignore run_trappist1_sims_v2.py
 
 import numpy as np
 import scipy
 import multiprocessing
 import pickle as pkl
 import os
+import sys
 import trappist1_sim as t1
 from time import time
 from astropy import units as u
@@ -29,11 +30,6 @@ def generate_params(planet_names, rng):
     
     # Define planet masses (m)
     m_vals = np.array([planet_params[planet_name]['Mp (M⨁)'] for planet_name in planet_names])
-
-    # m_vals[0] = rng.uniform(1, 1.5) # (actual observed is 1.37 M_earth) random b mass
-    # m_vals[1] = rng.uniform(1, 1.5) # (actual observed is 1.31 M_earth) random c mass
-    # m_vals[2] = rng.uniform(1.3, 1.7) # (actual observed is 0.39 M_earth) random d mass
-    
     m_vals *= m_earth # convert to Msun
 
     # Define planet radii (r)
@@ -44,32 +40,31 @@ def generate_params(planet_names, rng):
     m_star = stellar_params['M✶ (M⦿)']
     r_star = stellar_params['R✶ (R⦿)'] * r_sun
 
-    # Draw initial ratios from log normal
-    # initial_P_ratios = rng.lognormal(0.6, 0.2, size=len(planet_names)-1) 
-    #                                     # In Keller, 0.703 & 0.313
-                                        
-    # # Constant period ratios
-    # initial_P_ratios = np.full(len(planet_names)-1, 1.9)
-    
-    # Uniform random just above 2:1
+    # Uniform random initial period ratios just above 2:1
     initial_P_ratios = rng.uniform(2.05, 2.1, size=len(planet_names)-1) 
+    
+    initial_P_ratios = np.full(len(planet_names)-1, 1.55)
                                         
     # Draw surface density at 1au from log uniform
     Sigma_1au = scipy.stats.loguniform.rvs(a=50, b=1000, size=1, random_state=rng) # in g/cm^2
                                 # In Keller, 10 & 10000
+                                
+    Sigma_1au = 50 # no random
     Sigma_1au *= AU**2 / Msun # unit conversion for sim
 
     # Draw K-factor from log uniform and solve for h
     K_factor = scipy.stats.loguniform.rvs(a=10, b=200, size=1, random_state=rng)
                                 # In Keller, 10 & 1000
+    K_factor = 50 # no random
                                 
     return m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor
 
-planet_names = ['b', 'c', 'd', 'e', 'f', 'g']
+planet_names = ['b', 'c', 'd', 'e', 'f', 'g', 'h']
+planet_names = ['b', 'c', 'd', 'e']
 
 # Remember to change these before running each time
-dataset_id = 12
-n_sims = 200
+dataset_id = 14
+n_sims = 10
 
 def run_sim(sim_id):
     # Different rng for each sim
@@ -83,20 +78,16 @@ def run_sim(sim_id):
     m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor = generate_params(planet_names, rng)
     
     # Sim integration!
-    outcome = t1.simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, planet_names, sim_id, file_path)
+    outcome = t1.simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, planet_names, sim_id, file_path, 
+                                    integrator="trace", test=False)
     print(f"Sim ID: {sim_id:<2d} | Outcome: {outcome}")
     return (sim_id, m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, outcome)
     
 if __name__ == "__main__":
     dataset_dir = Path.cwd().parent / "sim_results" / f"dataset{dataset_id}"
     
-    # Ensure dataset_id not taken already
-    if dataset_dir.exists():
-        print(f"Error: dataset{dataset_id} already exists. Change dataset_id before running.")
-        exit(1)
-    
     # Create the folder
-    dataset_dir.mkdir(parents=True, exist_ok=False)
+    dataset_dir.mkdir(parents=True, exist_ok=True) # change exist_ok to False if you don't want to override existing folder
     print(f"Created directory: {dataset_dir}")
 
     print(f"Dataset: {dataset_id}")
@@ -121,18 +112,3 @@ if __name__ == "__main__":
     # print(sim_outcomes)
     
     print(f'Time elapsed: {np.round(time()-tstart)} sec')
-    
-    
-'''
-Dataset documentation
-
-test: for testing
-0-1: params: K, Sigma1au, P_ratios; outcome: single value
-2-6: params: K, Sigma1au, P_ratios; outcome: vectorized
-7: params: K, Sigma1au; P_ratios kept constant at 1.8 for all; outcome: vectorized
-8: params: K, Sigma1au; P_ratios kept constant at 1.9 for all; outcome: vectorized
-9: params: K, Sigma1au, mass of d in U(0,2, 0.6); P_ratios kept constant at 1.9 for all; outcome: vectorized
-10: params: K, Sigma1au, mass of d in U(0.4, 1.3); P_ratios kept constant at 1.9 for all; outcome: vectorized
-11: params: K, Sigma1au, mass of d in U(1.3, 1.7); P_ratios kept constant at 1.9 for all; outcome: vectorized
-13: params: K, Sigma1au, P_ratios in U(2.05, 2.1); outcome: vectorized
-'''
