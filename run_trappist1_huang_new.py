@@ -121,13 +121,13 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, r_val
             
             # save data
             name = planet_names[p]
-            stage_data[name]["a"][i] = planets[p].a
-            stage_data[name]["e"][i] = planets[p].e
-            stage_data[name]["l"][i] = planets[p].l
-            stage_data[name]["pomega"][i] = planets[p].pomega
+            stage_data[name].loc[i, "a"] = planets[p].a
+            stage_data[name].loc[i, "e"] = planets[p].e
+            stage_data[name].loc[i, "l"] = planets[p].l
+            stage_data[name].loc[i, "pomega"] = planets[p].pomega   
             
             if p != num_planets-1: # don't record period ratio for last planet
-                stage_data[name]["P_ratio"][i] = planets[p+1].P / planets[p].P
+                stage_data[name].loc[i, "P_ratio"] = planets[p+1].P / planets[p].P
                                 
                 # Stop sim if separation within 5*r_hill
                 # (since symplectic integrators are not designed to handle close encounters)
@@ -154,7 +154,7 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, r_val
         # Stop simulation early if failed
         if not completed_sim:
             break
-        
+    
     return stage_data, completed_sim
 
 def simulate_trappist1(sim_id, file_path, planet_names, m_vals, m_star, r_vals, r_star, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim, initial_P_ratios, integrator="whfast"):
@@ -190,8 +190,8 @@ def simulate_trappist1(sim_id, file_path, planet_names, m_vals, m_star, r_vals, 
     mof = rebx.load_force("modify_orbits_forces")
     rebx.add_force(mof)
 
-    years = -1.5*get_taus(m_vals, a_vals, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim)[0][-1] # 1.5 tau_a of the last planet
-    
+    years = -get_taus(m_vals, a_vals, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim)[0][-1] # tau_a of the last planet
+    print(f"Sim ID: {sim_id:<2d} | years: {years:.3g}")
     data, complete_sim = integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim, years, start_time=0)
     
     # Save data
@@ -233,7 +233,6 @@ def run_sim(sim_id):
     
     # Sim integration!
     outcome = simulate_trappist1(sim_id, file_path, planet_names, m_vals, m_star, r_vals, r_star, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim, initial_P_ratios, integrator="trace")
-    print(f"Sim ID: {sim_id:<2d}")
     return (sim_id, m_vals, r_vals, m_star, r_star, initial_P_ratios)
     
 if __name__ == "__main__":
@@ -245,12 +244,19 @@ if __name__ == "__main__":
 
     print(f"Dataset: {dataset_id}")
     tstart = time()
-    
-    # Start a local Dask cluster matching available CPU count
-    cluster = LocalCluster()
+
+    # Start a local Dask cluster
+    n_cpus = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
+    print(f"CPUs: {n_cpus}")
+    cluster = LocalCluster(
+        n_workers=n_cpus,
+        threads_per_worker=1,
+        processes=True
+    )    
     client = Client(cluster)
-    print(f"Running sims on {len(client.scheduler_info()['workers'])} workers")
-    print(f"Dask dashboard: {client.dashboard_link}")
+    
+    # print(f"Running sims on {len(client.scheduler_info()['workers'])} workers")
+    # print(f"Dask dashboard: {client.dashboard_link}")
 
     try:
         # Submit all simulations as Dask futures
