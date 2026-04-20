@@ -1,10 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=sim_test
-#SBATCH --output=sbatch.out
-#SBATCH --time=00:30:00
-#SBATCH --nodes=1
+#SBATCH --job-name=trappist1_sims
+#SBATCH --output=sbatch_%a.out
+#SBATCH --time=01:00:00
+#SBATCH --partition=broadwl
+#SBATCH --cpus-per-task=28
 #SBATCH --account=pi-fabrycky
-#SBATCH --mem-per-cpu=8192
+#SBATCH --mem=56G
+#SBATCH --array=13
 
 echo Script started.
 
@@ -12,14 +14,10 @@ module load Anaconda3
 
 echo Loaded Anaconda3.
 
-conda activate myenv
+source activate myenv
 
 echo Environment activated.
 
-pip install -r --dchen10 requirements.txt
-
-echo Requirements installed.
-
-python run_trappist1_sims.py
+/home/dchen10/.conda/envs/myenv/bin/python3 run_trappist1_sims.py $SLURM_ARRAY_TASK_ID
 
 echo Finished running.

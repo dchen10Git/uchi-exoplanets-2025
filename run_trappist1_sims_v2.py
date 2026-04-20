@@ -1,9 +1,10 @@
-# Multiprocessing version of the trappist1_keller.ipynb notebook
+# Dask version of the trappist1_keller.ipynb notebook
 # To run, use python3 -W ignore run_trappist1_sims_v2.py
 
 import numpy as np
 import scipy
-import multiprocessing
+import dask
+from dask.distributed import Client, LocalCluster
 import pickle as pkl
 import os
 import sys
@@ -79,7 +80,7 @@ def run_sim(sim_id):
     
     # Sim integration!
     outcome = t1.simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, planet_names, sim_id, file_path, 
-                                    integrator="trace", test=False)
+                                    integrator="whfast", test=False)
     print(f"Sim ID: {sim_id:<2d} | Outcome: {outcome}")
     return (sim_id, m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, outcome)
     
@@ -87,28 +88,36 @@ if __name__ == "__main__":
     dataset_dir = Path.cwd().parent / "sim_results" / f"dataset{dataset_id}"
     
     # Create the folder
-    dataset_dir.mkdir(parents=True, exist_ok=True) # change exist_ok to False if you don't want to override existing folder
+    dataset_dir.mkdir(parents=True, exist_ok=True)
     print(f"Created directory: {dataset_dir}")
 
     print(f"Dataset: {dataset_id}")
     tstart = time()
     
-    # Create a pool of worker processes
-    print(f"Running sims on {multiprocessing.cpu_count()} processes")
-    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-        # Map the simulation function to the sim_id's
-        outcomes = pool.map(run_sim, range(n_sims))
+    # Start a local Dask cluster matching available CPU count
+    cluster = LocalCluster()
+    client = Client(cluster)
+    print(f"Running sims on {len(client.scheduler_info()['workers'])} workers")
+    print(f"Dask dashboard: {client.dashboard_link}")
+
+    try:
+        # Submit all simulations as Dask futures
+        futures = [client.submit(run_sim, sim_id) for sim_id in range(n_sims)]
+        
+        # Gather results (blocks until all futures are complete)
+        outcomes = client.gather(futures)
+    finally:
+        client.close()
+        cluster.close()
     
     # Save the outcomes
     outcome_file = f"../sim_results/dataset{dataset_id}/outcomes.pkl"
-    with open(f"../sim_results/dataset{dataset_id}/outcomes.pkl", "wb") as f:
+    with open(outcome_file, "wb") as f:
         pkl.dump(outcomes, f)
         print(f"Saved to {outcome_file}")
     
     # Load to verify
     with open(outcome_file, "rb") as f:
         sim_outcomes = pkl.load(f)
-    
-    # print(sim_outcomes)
     
     print(f'Time elapsed: {np.round(time()-tstart)} sec')

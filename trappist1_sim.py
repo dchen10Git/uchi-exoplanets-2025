@@ -130,7 +130,7 @@ def data_df(n_out, times):
         "pomega": np.zeros(n_out)
     })
 
-def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years, start_time=0):
+def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years, start_time=0, model="Keller"):
     '''
     Integrates a REBOUND simulation over a given number of years,
     saves the new state of the sim and returns the data as a Pandas DataFrame. 
@@ -149,8 +149,15 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years
         sim.integrate(t)
         
         current_a_vals = np.array([p.a for p in sim.particles[1:]])
+        tau_a, tau_e = get_taus(current_a_vals)
         
         for p in range(num_planets):
+            if model == "Huang":
+                # Update damping timescales
+                planets[p].params["tau_a"] = tau_a[p]
+                planets[p].params["tau_e"] = tau_e[p]
+        
+            # save data
             name = planet_names[p]
             stage_data[name]["a"][i] = planets[p].a
             stage_data[name]["e"][i] = planets[p].e
@@ -313,9 +320,12 @@ def plot_trappist1(sim_data, t_units='kyr'):
     ax3.set_ylim(1,2.2)
     
     # Plot ide location & width
-    ax1.axhline(sim_data[1]["ide_position"], color='gray', ls='--', alpha=0.7)
-    ax1.axhline(sim_data[1]["ide_position"] - sim_data[1]["ide_width"], color='gray', ls='--', alpha=0.1)
-    ax1.axhline(sim_data[1]["ide_position"] + sim_data[1]["ide_width"], color='gray', ls='--', alpha=0.1)
+    try:
+        ax1.axhline(sim_data[1]["ide_position"], color='gray', ls='--', alpha=0.7)
+        ax1.axhline(sim_data[1]["ide_position"] - sim_data[1]["ide_width"], color='gray', ls='--', alpha=0.1)
+        ax1.axhline(sim_data[1]["ide_position"] + sim_data[1]["ide_width"], color='gray', ls='--', alpha=0.1)
+    except:
+        pass
 
     ax1.legend(); ax2.legend(); ax3.legend()
     ax1.grid(True); ax2.grid(True); ax3.grid(True)
@@ -361,7 +371,7 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
     # Initial semimajor axis of b
     a_b = 0.05
 
-    # Define initial periods (P) and semimajor axes (a)
+    # Define initial periods (P) and semimajor axes (a) 
     P_vals = [(a_b**3 / m_star)**(1/2)]
     for i in range(num_planets-1):
         P_vals = np.append(P_vals, P_vals[i] * initial_P_ratios[i])
@@ -415,6 +425,139 @@ def simulate_trappist1(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1
                         "planet_names": planet_names,
                         "ide_position": mig.params["ide_position"],
                         "ide_width": mig.params["ide_width"],
+                        "m_vals": m_vals,
+                        "r_vals": r_vals,
+                        "m_star": m_star,
+                        "r_star": r_star,
+                        "initial_P_ratios": initial_P_ratios,
+                        "Sigma_1au": Sigma_1au,
+                        "K_factor": K_factor,
+                        "integrator": integrator
+                        })
+
+    saved_sim = load_simulation_run(file_path)
+    outcome = mmr_id.res_chain_outcome(saved_sim)
+    if complete_sim:
+        return outcome
+    else:
+        return np.full_like(outcome, -1)
+
+def f_functions(r, r_c, Delta, A_a, A_e):
+    # Piecewise functions f_a and f_e
+    conditions = [
+        r < r_c - Delta,
+        (r_c - Delta <= r) & (r < r_c),
+        (r_c <= r) & (r < r_c + Delta + 1 / A_a),
+        r >= r_c + Delta + 1 / A_a
+    ]
+
+    f_a = [
+        0,          
+        A_a * (r_c - Delta - r) / Delta,
+        (r-r_c)* (A_a + 1) / (Delta + 1/A_a) - (A_a), # modified to make it continuous, paper might be wrong
+        1
+    ]
+
+    f_e = [
+        0,          
+        A_e * (r - r_c + Delta) / Delta,
+        (A_e - 1) * (r_c + Delta + 1 / A_a - r) / (Delta + 1 / A_a) + 1, 
+        1
+    ]
+
+    f_a_vals = np.select(conditions, f_a, default=np.nan)
+    f_e_vals = np.select(conditions, f_e, default=np.nan)
+    return f_a_vals, f_e_vals
+
+def get_taus(m_vals, r_vals, m_star, current_a_vals, tau_a_earth, r_earth, q_earth, q_vals, Q_sim, C_e):
+    '''
+    Computes damping timescales based on current semimajor axis values.
+    
+    Parameters:
+        current_a_vals: 1D NumPy array of current semimajor axis values.
+    
+    Returns:
+        tau_a: semimajor axis damping timescale.
+        tau_e: eccentricity damping timescale.
+    '''
+    f_a_vals, f_e_vals = f_functions(current_a_vals)
+    tau_a = -tau_a_earth * (q_earth / q_vals) / f_a_vals # negative so damping?
+    tau_e_disk = C_e * tau_a * f_a_vals / f_e_vals # I removed a h^2 here
+    tau_e_star = 7.63e5 * Q_sim * (m_vals/m_earth) * (1/m_star)**1.5 * (r_earth/r_vals)** 5 * (current_a_vals/0.05)**6.5
+    tau_e = (tau_e_disk * tau_e_star) / (tau_e_disk + tau_e_star) # combining the two based on Eqs. 4 and 13
+    return tau_a, tau_e
+
+def simulate_trappist1_huang(m_vals, r_vals, m_star, r_star, initial_P_ratios, Sigma_1au, K_factor, planet_names, sim_id, file_path, integrator="whfast", test=False):
+    '''
+    Given initial parameters. planet_names, sim_id, file_path, and integrator,
+    simulates the TRAPPIST-1 system, saves the data, and returns list depending 
+    on the outcome. 
+    '''
+    # Create the simulation
+    sim = rebound.Simulation()
+    sim.units = ('AU', 'yr', 'Msun')
+    sim.integrator = integrator
+
+    # Add the star
+    sim.add(m=m_star, r=r_star)
+    
+    q_vals = m_vals / m_star
+    q_earth =  3.003e-6 / m_star
+
+    num_planets = len(m_vals)
+    
+    # Define initial eccentricities (e)
+    e_vals = np.zeros_like(m_vals)
+
+    # Draw initial mean anomalies (M)
+    M_vals = np.zeros_like(m_vals)
+
+    # Initial semimajor axis of b
+    a_b = 0.05
+
+    # Define initial periods (P) and semimajor axes (a)
+    P_vals = [(a_b**3 / m_star)**(1/2)]
+    for i in range(num_planets-1):
+        P_vals = np.append(P_vals, P_vals[i] * initial_P_ratios[i])
+        
+    a_vals = (P_vals**2 * m_star)**(1/3)
+
+    # Add planets 
+    for i in range(num_planets):
+        sim.add(m=m_vals[i], r=r_vals[i], a=a_vals[i], e=e_vals[i], M=M_vals[i])
+
+    # Move to center of momentum
+    sim.move_to_com()
+    ps = sim.particles
+    planets = ps[1:] # for easier indexing
+    
+    initial_tau_a_vals = get_taus(a_vals, m_vals, m_star)[0]
+    # print(f"tau_a values: {np.round(initial_tau_a_vals)} yr \n")
+    
+    years = np.clip(2*initial_tau_a_vals[-1], 30000, 10000000) # Integrate for tau_a of the last planet (Keller does 3*tau_a), with 
+                                                               # lower limit 30 kyr and upper limit 10 Myr
+    # print(f"Integrating {years/1000:.4} kyrs \n")
+    
+    if test: # Short simulation for testing purposes
+        years = 100
+    
+    # Code using modify_orbits_forces
+    rebx = reboundx.Extras(sim)
+
+    # Planet-disk interaction
+    mof = rebx.load_force("modify_orbits_forces")
+    rebx.add_force(mof)
+
+    
+    # Huang & Ormel (2022) used positions r_c in [0.013 - 0.030 au] with width 
+    # Delta = 2hr_c = 0.06 r_c. In particular, r_c = 0.023 worked best.
+    
+    data, complete_sim = integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years, start_time=0)
+    
+    # Save data
+    save_simulation_run(data, sim_id, file_path, sim_metadata={
+                        "num_planets": num_planets, 
+                        "planet_names": planet_names,
                         "m_vals": m_vals,
                         "r_vals": r_vals,
                         "m_star": m_star,
