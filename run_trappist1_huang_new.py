@@ -76,7 +76,7 @@ def f_functions(r, r_c, Delta, A_a, A_e):
     f_e = [
         0,          
         A_e * (r - r_c + Delta) / Delta,
-        (A_e - 1) * (r_c + Delta + 1 / A_a - r) / (Delta + 1 / A_a) + 1, 
+        (A_e - 1) * (r_c + Delta + 1 / A_a - r) / (Delta + Delta / A_a) + 1, 
         1
     ]
 
@@ -190,7 +190,7 @@ def simulate_trappist1(sim_id, file_path, planet_names, m_vals, m_star, r_vals, 
     mof = rebx.load_force("modify_orbits_forces")
     rebx.add_force(mof)
 
-    years = -1.5*get_taus(m_vals, a_vals, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim)[0][-1] # 1.5 tau_a of the last planet
+    years = -1.2*get_taus(m_vals, a_vals, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim)[0][-1] # 1.5 tau_a of the last planet
     
     data, complete_sim = integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim, years, start_time=0)
     
@@ -213,7 +213,7 @@ def simulate_trappist1(sim_id, file_path, planet_names, m_vals, m_star, r_vals, 
                         "integrator": integrator
                         })
         
-planet_names = ['b', 'c', 'd', 'e', 'f', 'g', 'h']
+planet_names = ['b', 'c', 'd']
 # Remember to change these before running each time
 dataset_id = 15
 n_sims = 50
