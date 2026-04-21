@@ -122,12 +122,12 @@ def get_hill_radius(m1, a1, m2, a2, M_star):
 def data_df(n_out, times):        
     return pd.DataFrame({
         "time": times,
-        "a": np.zeros(n_out),
-        "e": np.zeros(n_out),
-        "P": np.zeros(n_out),
-        "P_ratio": np.zeros(n_out),
-        "l": np.zeros(n_out),
-        "pomega": np.zeros(n_out)
+        "a": np.full(n_out, np.nan),
+        "e": np.full(n_out, np.nan),
+        "P": np.full(n_out, np.nan),
+        "P_ratio": np.full(n_out, np.nan),
+        "l": np.full(n_out, np.nan),
+        "pomega": np.full(n_out, np.nan)
     })
 
 def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, years, start_time=0, model="Keller"):

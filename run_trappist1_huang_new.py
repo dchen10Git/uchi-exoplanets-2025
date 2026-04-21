@@ -86,10 +86,11 @@ def f_functions(r, r_c, Delta, A_a, A_e):
     return f_a_vals, f_e_vals
 
 def get_taus(a_vals, parameters):
-    m_vals, m_star, r_vals, r_c, Delta, A_a, A_e, C_e, Q_sim = parameters["m_vals"], parameters["m_star"], parameters["r_vals"], parameters["r_c"], parameters["Delta"], parameters["A_a"], parameters["A_e"], parameters["C_e"], parameters["Q_sim"]
+    n = 1 if isinstance(a_vals, float) else len(a_vals) # number of inputs
+    m_vals, m_star, r_vals, r_c, Delta, A_a, A_e, C_e, Q_sim = parameters["m_vals"][:n], parameters["m_star"], parameters["r_vals"][:n], parameters["r_c"], parameters["Delta"], parameters["A_a"], parameters["A_e"], parameters["C_e"], parameters["Q_sim"]
     q_vals = m_vals / m_star
     f_a_vals, f_e_vals = f_functions(a_vals, r_c, Delta, A_a, A_e)
-    tau_a = - tau_a_earth * (q_earth / q_vals) / f_a_vals # negative so damping?
+    tau_a = - tau_a_earth * (q_earth / q_vals) / f_a_vals # negative so damping
     tau_e_disk = C_e * tau_a * f_a_vals * (h**2) / f_e_vals
     tau_e_star = 7.63e5 * Q_sim * (m_vals/m_earth) * (1/m_star)**1.5 * (r_earth/r_vals)** 5 * (a_vals/0.05)**6.5
     tau_e = (tau_e_disk * tau_e_star) / (tau_e_disk + tau_e_star) # combining the two based on Eqs. 4 and 13
@@ -101,7 +102,8 @@ def integrate_sim(sim, planets, planet_names, parameters, years, start_time=0):
     saves the new state of the sim and returns the data as a Pandas DataFrame. 
     Also returns whether the integration completed as a bool.
     '''
-    m_vals, m_star, tau_1s, tau_pl = parameters["m_vals"], parameters["m_star"], parameters["tau_1s"], parameters["tau_pl"]
+    m_vals, m_star, r_vals, tau_1s, tau_pl = parameters["m_vals"], parameters["m_star"], parameters["r_vals"], parameters["tau_1s"], parameters["tau_pl"]
+    num_planets_current = len(planets)
     num_planets = len(planet_names)
     
     # Set up times for integration & data collection
@@ -116,10 +118,32 @@ def integrate_sim(sim, planets, planet_names, parameters, years, start_time=0):
         sim.dt = planets[0].P / 20 # 1/20 of planet b
         sim.integrate(t)
         
+        # add planet e, f, g, h sequentially
+        if len(planets) == 3 and t > tau_pl:
+            sim.add(m=m_vals[3], r=r_vals[3], P=planets[2].P * 1.9) # inside 2:1
+            ps = sim.particles
+            planets = ps[1:]
+            num_planets_current = len(planets)
+        if len(planets) == 4 and t > 2*tau_pl:
+            sim.add(m=m_vals[4], r=r_vals[4], P=planets[3].P * 1.9) # inside 3:2
+            ps = sim.particles
+            planets = ps[1:]
+            num_planets_current = len(planets)
+        if len(planets) == 5 and t > 3*tau_pl:
+            sim.add(m=m_vals[5], r=r_vals[5], P=planets[4].P * 1.4) # inside 2:1
+            ps = sim.particles
+            planets = ps[1:]
+            num_planets_current = len(planets)
+        if len(planets) == 6 and t > 4*tau_pl:
+            sim.add(m=m_vals[6], r=r_vals[6], P=planets[5].P * 1.9) # inside 2:1
+            ps = sim.particles
+            planets = ps[1:]
+            num_planets_current = len(planets)
+        
         a_vals = np.array([p.a for p in sim.particles[1:]])
         tau_a, tau_e = get_taus(a_vals, parameters)
         
-        for p in range(num_planets):
+        for p in range(num_planets_current):
             # Update damping timescales
             planets[p].params["tau_a"] = tau_a[p]
             planets[p].params["tau_e"] = tau_e[p]
@@ -134,7 +158,7 @@ def integrate_sim(sim, planets, planet_names, parameters, years, start_time=0):
             stage_data[name].loc[i, "l"] = planets[p].l
             stage_data[name].loc[i, "pomega"] = planets[p].pomega   
             
-            if p != num_planets-1: # don't record period ratio for last planet
+            if p != num_planets_current-1: # don't record period ratio for last planet
                 stage_data[name].loc[i, "P_ratio"] = planets[p+1].P / planets[p].P
                                 
                 # Stop sim if separation within 5*r_hill
@@ -177,15 +201,14 @@ def simulate_trappist1(sim_id, file_path, planet_names, parameters, integrator="
     num_planets = len(planet_names)
     
     # Define initial periods (P) and semimajor axes (a) 
-    P_vals = [((r_c+Delta+Delta/A_a)**3 / m_star)**(1/2) / 1.53 / 1.53] # for d to be at the disk edge (0.023)
-    for i in range(num_planets-1):
-        P_vals = np.append(P_vals, P_vals[i] * initial_P_ratios[i])
+    P_d = ((r_c+Delta+Delta/A_a)**3 / m_star)**(1/2) # for d to be at the disk edge
+    P_c = P_d / 1.51
+    P_b = P_c / 1.51
+    P_vals = [P_b, P_c, P_d]
         
-    a_vals = (P_vals**2 * parameters["m_star"])**(1/3)
-
     # Add planets 
-    for i in range(num_planets):
-        sim.add(m=m_vals[i], r=r_vals[i], a=a_vals[i])
+    for i in range(3):
+        sim.add(m=m_vals[i], r=r_vals[i], P=P_vals[i])
 
     # Move to center of momentum
     sim.move_to_com()
@@ -196,8 +219,10 @@ def simulate_trappist1(sim_id, file_path, planet_names, parameters, integrator="
     mof = rebx.load_force("modify_orbits_forces")
     rebx.add_force(mof)
 
-    years = -get_taus(a_vals, parameters)[0][-1] # tau_a of the last planet
-    years = parameters["tau_pl"]
+    years = -get_taus(ps[-1].a, parameters)[0][-1] # tau_a of the last planet
+    years = 9e5 # roughly half of tau_1s
+    
+    # failsafe
     if years < 1000:
         years = 1000
         
@@ -209,7 +234,7 @@ def simulate_trappist1(sim_id, file_path, planet_names, parameters, integrator="
                         "num_planets": num_planets, 
                         "planet_names": planet_names} | parameters)
         
-planet_names = ['b', 'c', 'd']
+planet_names = ['b', 'c', 'd', 'e', 'f', 'g', 'h']
 # Remember to change these before running each time
 dataset_id = 15
 n_sims = 1
@@ -228,7 +253,7 @@ def run_sim(sim_id):
     C_e = 0.1*sim_id + 0.1
     tau_1s = 1/(0.0054/tau_a_earth) # damping on c when in disk (positive so divergent)
     tau_pl = 120e3 # planet formation interval time-scale
-    
+        
     parameters = {"m_vals": m_vals,
                   "m_star": m_star,
                   "r_vals": r_vals,
