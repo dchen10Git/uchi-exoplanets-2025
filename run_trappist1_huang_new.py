@@ -114,7 +114,12 @@ def integrate_sim(sim, planets, planet_names, parameters, years, start_time=0):
 
     completed_sim = True
     
+    print("Integration starting")
+
     for i, t in enumerate(stage_times): 
+        if i % 1000 == 0:
+            print(f"{(i+1)*5}% complete")
+            
         sim.dt = planets[0].P / 20 # 1/20 of planet b
         sim.integrate(t)
         

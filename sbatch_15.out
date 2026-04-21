@@ -1,63 +1,13 @@
 Script started.
 ERROR: Unable to locate a modulefile for 'Anaconda3'
 Loaded Anaconda3.
-/var/spool/slurm/d/job48808593/slurm_script: line 17: activate: No such file or directory
+/var/spool/slurm/d/job48825066/slurm_script: line 17: activate: No such file or directory
 Environment activated.
+/home/dchen10/uchi-exoplanets-2025/mmr_id.py:91: SyntaxWarning: "\p" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\p"? A raw string is also an option.
+  plt.ylabel(f"Two-body resonant angle of {b_name} & {c_name} $\phi$ (degrees)")
+/home/dchen10/uchi-exoplanets-2025/mmr_id.py:116: SyntaxWarning: "\p" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\p"? A raw string is also an option.
+  plt.ylabel(f"Three-body resonant angle of {b_name}, {c_name}, & {d_name} $\phi$ (degrees)")
 Created directory: /home/dchen10/sim_results/dataset15
 Dataset: 15
-CPUs: 28
-Sim ID: 26 | years: 46384.19411841621
-Sim ID: 12 | years: 42518.8446085482
-Sim ID: 37 | years: 50249.54362828423
-Sim ID: 22 | years: 46384.19411841621
-Sim ID: 25 | years: 46384.19411841621
-Sim ID: 27 | years: 46384.19411841621
-Sim ID: 16 | years: 42518.8446085482
-Sim ID: 41 | years: 54114.89313815225
-Sim ID: 2  | years: 38653.49509868018
-Sim ID: 32 | years: 50249.54362828423
-Sim ID: 5  | years: 38653.49509868018
-Sim ID: 38 | years: 50249.54362828423
-Sim ID: 23 | years: 46384.19411841621
-Sim ID: 49 | years: 54114.89313815225
-Sim ID: 8  | years: 38653.49509868018
-Sim ID: 44 | years: 54114.89313815225
-Sim ID: 15 | years: 42518.8446085482
-Sim ID: 35 | years: 50249.54362828423
-Sim ID: 19 | years: 42518.8446085482
-Sim ID: 33 | years: 50249.54362828423
-Sim ID: 24 | years: 46384.19411841621
-Sim ID: 45 | years: 54114.89313815225
-Sim ID: 14 | years: 42518.8446085482
-Sim ID: 29 | years: 46384.19411841621
-Sim ID: 1  | years: 38653.49509868018
-Sim ID: 30 | years: 50249.54362828423
-Sim ID: 11 | years: 42518.8446085482
-Sim ID: 43 | years: 54114.89313815225
-Sim ID: 7  | years: 38653.49509868018
-Sim ID: 42 | years: 54114.89313815225
-Sim ID: 18 | years: 42518.8446085482
-Sim ID: 39 | years: 50249.54362828423
-Sim ID: 0  | years: 38653.49509868018
-Sim ID: 28 | years: 46384.19411841621
-Sim ID: 9  | years: 38653.49509868018
-Sim ID: 46 | years: 54114.89313815225
-Sim ID: 21 | years: 46384.19411841621
-Sim ID: 13 | years: 42518.8446085482
-Sim ID: 31 | years: 50249.54362828423
-Sim ID: 4  | years: 38653.49509868018
-Sim ID: 36 | years: 50249.54362828423
-Sim ID: 6  | years: 38653.49509868018
-Sim ID: 40 | years: 54114.89313815225
-Sim ID: 20 | years: 46384.19411841621
-Sim ID: 17 | years: 42518.8446085482
-Sim ID: 47 | years: 54114.89313815225
-Sim ID: 10 | years: 42518.8446085482
-Sim ID: 48 | years: 54114.89313815225
-Sim ID: 3  | years: 38653.49509868018
-Sim ID: 34 | years: 50249.54362828423
-Running sims on 5 workers
-Dask dashboard: http://127.0.0.1:8787/status
-Saved to ../sim_results/dataset15/outcomes.pkl
-Time elapsed: 208.0 sec
-Finished running.
+CPUs: 1
+slurmstepd: error: *** JOB 48825066 ON midway3-0025 CANCELLED AT 2026-04-21T11:01:04 ***

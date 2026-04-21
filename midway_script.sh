@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=trappist1_sims
 #SBATCH --output=sbatch_%a.out
-#SBATCH --time=01:00:00
+#SBATCH --time=05:00:00
 #SBATCH --partition=caslake
-#SBATCH --cpus-per-task=28
+#SBATCH --cpus-per-task=1
 #SBATCH --account=pi-fabrycky
-#SBATCH --mem=56G
+#SBATCH --mem-per-cpu=4G
 #SBATCH --array=15
 
 echo Script started.
