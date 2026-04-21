@@ -33,8 +33,6 @@ tau_d = 1e5
 Delta = 2*h*r_c
 Q_sim = 100
 q_earth =  3.003e-6 / M_star
-print(r_c-Delta)
-print(r_c+Delta+Delta/A_a)
     
 def generate_params(planet_names, rng):
     # Nested dict containing params for each planet in sim
@@ -87,23 +85,27 @@ def f_functions(r, r_c, Delta, A_a, A_e):
     f_e_vals = np.select(conditions, f_e, default=np.nan)
     return f_a_vals, f_e_vals
 
-def get_taus(m_vals, a_vals, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim):
-    q_vals = m_vals / M_star
+def get_taus(a_vals, parameters):
+    m_vals, m_star, r_vals, r_c, Delta, A_a, A_e, C_e, Q_sim = parameters["m_vals"], parameters["m_star"], parameters["r_vals"], parameters["r_c"], parameters["Delta"], parameters["A_a"], parameters["A_e"], parameters["C_e"], parameters["Q_sim"]
+    q_vals = m_vals / m_star
     f_a_vals, f_e_vals = f_functions(a_vals, r_c, Delta, A_a, A_e)
     tau_a = - tau_a_earth * (q_earth / q_vals) / f_a_vals # negative so damping?
     tau_e_disk = C_e * tau_a * f_a_vals * (h**2) / f_e_vals
-    tau_e_star = 7.63e5 * Q_sim * (m_vals/m_earth) * (1/M_star)**1.5 * (r_earth/r_vals)** 5 * (a_vals/0.05)**6.5
+    tau_e_star = 7.63e5 * Q_sim * (m_vals/m_earth) * (1/m_star)**1.5 * (r_earth/r_vals)** 5 * (a_vals/0.05)**6.5
     tau_e = (tau_e_disk * tau_e_star) / (tau_e_disk + tau_e_star) # combining the two based on Eqs. 4 and 13
     return tau_a, tau_e
 
-def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim, years, start_time=0):
+def integrate_sim(sim, planets, planet_names, parameters, years, start_time=0):
     '''
     Integrates a REBOUND simulation over a given number of years,
     saves the new state of the sim and returns the data as a Pandas DataFrame. 
     Also returns whether the integration completed as a bool.
     '''
+    m_vals, m_star = parameters["m_vals"], parameters["m_star"]
+    num_planets = len(planet_names)
+    
     # Set up times for integration & data collection
-    n_out = 2000 # number of data points to collect
+    n_out = int(years) # number of data points to collect
     stage_times = np.linspace(start_time, years+start_time, n_out, endpoint=False)  # all times to integrate over
     stage_data = {name : t1.data_df(n_out, stage_times) for name in planet_names[:num_planets]}
     sim.random_seed = 13741154 # for reproducibility
@@ -115,7 +117,7 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, r_val
         sim.integrate(t)
         
         a_vals = np.array([p.a for p in sim.particles[1:]])
-        tau_a, tau_e = get_taus(m_vals, a_vals, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim)
+        tau_a, tau_e = get_taus(a_vals, parameters)
         
         for p in range(num_planets):
             # Update damping timescales
@@ -133,7 +135,6 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, r_val
                 stage_data[name].loc[i, "P_ratio"] = planets[p+1].P / planets[p].P
                                 
                 # Stop sim if separation within 5*r_hill
-                # (since symplectic integrators are not designed to handle close encounters)
                 r_hill = t1.get_hill_radius(m_vals[p], a_vals[p], m_vals[p+1], a_vals[p+1], m_star)
                 if np.abs(a_vals[p] - a_vals[p+1]) < 5*r_hill:
                     completed_sim = False
@@ -160,7 +161,9 @@ def integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, r_val
     
     return stage_data, completed_sim
 
-def simulate_trappist1(sim_id, file_path, planet_names, m_vals, m_star, r_vals, r_star, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim, initial_P_ratios, integrator="whfast"):
+def simulate_trappist1(sim_id, file_path, planet_names, parameters, integrator="whfast"):
+    m_vals, m_star, r_vals, r_star, r_c, Delta, A_a, initial_P_ratios = parameters["m_vals"], parameters["m_star"], parameters["r_vals"], parameters["r_star"], parameters["r_c"], parameters["Delta"], parameters["A_a"], parameters["initial_P_ratios"]
+    
     # Create the simulation
     sim = rebound.Simulation()
     sim.units = ('AU', 'yr', 'Msun')
@@ -168,15 +171,14 @@ def simulate_trappist1(sim_id, file_path, planet_names, m_vals, m_star, r_vals, 
     
     # Add the star
     sim.add(m=m_star, r=r_star)
-    num_planets = len(m_vals)
+    num_planets = len(planet_names)
     
     # Define initial periods (P) and semimajor axes (a) 
     P_vals = [((r_c+Delta+Delta/A_a)**3 / m_star)**(1/2) / 1.53 / 1.53] # for d to be at the disk edge (0.023)
     for i in range(num_planets-1):
         P_vals = np.append(P_vals, P_vals[i] * initial_P_ratios[i])
         
-    a_vals = (P_vals**2 * m_star)**(1/3)
-    print(a_vals)
+    a_vals = (P_vals**2 * parameters["m_star"])**(1/3)
 
     # Add planets 
     for i in range(num_planets):
@@ -191,29 +193,17 @@ def simulate_trappist1(sim_id, file_path, planet_names, m_vals, m_star, r_vals, 
     mof = rebx.load_force("modify_orbits_forces")
     rebx.add_force(mof)
 
-    years = 1000
-    # years = get_taus(m_vals, a_vals, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim)[0][-1]) # tau_a of the last planet
-    print(f"Sim ID: {sim_id:<2d} | years: {years}")
-    data, complete_sim = integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim, years, start_time=0)
+    years = -get_taus(a_vals, parameters)[0][-1] # tau_a of the last planet
+    if years < 1000:
+        years = 1000
+        
+    print(f"Sim ID: {sim_id:<2d} | years: {years:.3g}")
+    data, complete_sim = integrate_sim(sim, planets, planet_names, parameters, years, start_time=0)
     
     # Save data
     t1.save_simulation_run(data, sim_id, file_path, sim_metadata={
                         "num_planets": num_planets, 
-                        "planet_names": planet_names,
-                        "m_vals": m_vals,
-                        "m_star": m_star,
-                        "r_vals": r_vals,
-                        "r_star": r_star,
-                        "r_c": r_c,
-                        "Delta": Delta,
-                        "A_a": A_a,
-                        "A_e": A_e,
-                        "C_e": C_e,
-                        "tau_a_earth": tau_a_earth,
-                        "Q_sim": Q_sim,
-                        "initial_P_ratios": initial_P_ratios,
-                        "integrator": integrator
-                        })
+                        "planet_names": planet_names} | parameters)
         
 planet_names = ['b', 'c', 'd', 'e']
 # Remember to change these before running each time
@@ -232,9 +222,27 @@ def run_sim(sim_id):
     m_vals, r_vals, m_star, r_star, initial_P_ratios = generate_params(planet_names, rng)
     tau_a_earth = (sim_id//10)*1e3 + 1e4
     C_e = 0.1*sim_id + 0.1
+    tau_1s = 1/(0.0054/tau_a_earth) # damping on c when in disk
+    tau_pl = 2e4 # planet formation interval time-scale
+    
+    parameters = {"m_vals": m_vals,
+                  "m_star": m_star,
+                  "r_vals": r_vals,
+                  "r_star": r_star,
+                  "r_c": r_c,
+                  "Delta": Delta,
+                  "A_a": A_a,
+                  "A_e": A_e,
+                  "C_e": C_e,
+                  "tau_a_earth": tau_a_earth,
+                  "Q_sim": Q_sim,
+                  "tau_1s": tau_1s,
+                  "tau_pl": tau_pl,
+                  "initial_P_ratios": initial_P_ratios,
+                }
     
     # Sim integration!
-    outcome = simulate_trappist1(sim_id, file_path, planet_names, m_vals, m_star, r_vals, r_star, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim, initial_P_ratios, integrator="trace")
+    outcome = simulate_trappist1(sim_id, file_path, planet_names, parameters, integrator="trace")
     return (sim_id, m_vals, r_vals, m_star, r_star, initial_P_ratios)
     
 if __name__ == "__main__":
