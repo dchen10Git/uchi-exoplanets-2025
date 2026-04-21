@@ -105,7 +105,7 @@ def integrate_sim(sim, planets, planet_names, parameters, years, start_time=0):
     num_planets = len(planet_names)
     
     # Set up times for integration & data collection
-    n_out = 2000 # number of data points to collect
+    n_out = 20000 # number of data points to collect
     stage_times = np.linspace(start_time, years+start_time, n_out, endpoint=False)  # all times to integrate over
     stage_data = {name : t1.data_df(n_out, stage_times) for name in planet_names[:num_planets]}
     sim.random_seed = 13741154 # for reproducibility
@@ -197,9 +197,7 @@ def simulate_trappist1(sim_id, file_path, planet_names, parameters, integrator="
     rebx.add_force(mof)
 
     years = -get_taus(a_vals, parameters)[0][-1] # tau_a of the last planet
-    # years = parameters['tau_1s']
-    years = 20000
-    print(parameters["tau_1s"])
+    years = parameters["tau_pl"]
     if years < 1000:
         years = 1000
         
@@ -228,8 +226,8 @@ def run_sim(sim_id):
     m_vals, r_vals, m_star, r_star, initial_P_ratios = generate_params(planet_names, rng)
     tau_a_earth = (sim_id//10)*1e3 + 1e4
     C_e = 0.1*sim_id + 0.1
-    tau_1s = 1/(0.0054/tau_a_earth) # damping on c when in disk
-    tau_pl = 2e4 # planet formation interval time-scale
+    tau_1s = 1/(0.0054/tau_a_earth) # damping on c when in disk (positive so divergent)
+    tau_pl = 120e3 # planet formation interval time-scale
     
     parameters = {"m_vals": m_vals,
                   "m_star": m_star,
