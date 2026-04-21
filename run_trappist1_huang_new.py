@@ -33,6 +33,8 @@ tau_d = 1e5
 Delta = 2*h*r_c
 Q_sim = 100
 q_earth =  3.003e-6 / M_star
+print(r_c-Delta)
+print(r_c+Delta+Delta/A_a)
     
 def generate_params(planet_names, rng):
     # Nested dict containing params for each planet in sim
@@ -54,6 +56,7 @@ def generate_params(planet_names, rng):
 
     # Uniform random initial period ratios just above 2:1
     initial_P_ratios = rng.uniform(1.53, 1.55, size=len(planet_names)-1) 
+    initial_P_ratios = [1.53, 1.53, 1.8] # for b/c/d/e in early cavity infall model
                                     
     return m_vals, r_vals, m_star, r_star, initial_P_ratios
 
@@ -62,21 +65,21 @@ def f_functions(r, r_c, Delta, A_a, A_e):
     conditions = [
         r < r_c - Delta,
         (r_c - Delta <= r) & (r < r_c),
-        (r_c <= r) & (r < r_c + Delta + 1 / A_a),
-        r >= r_c + Delta + 1 / A_a
+        (r_c <= r) & (r < r_c + Delta + Delta/A_a),
+        r >= r_c + Delta + Delta / A_a
     ]
 
     f_a = [
         0,          
         A_a * (r_c - Delta - r) / Delta,
-        (r-r_c)* (A_a + 1) / (Delta + 1/A_a) - (A_a), # modified to make it continuous, paper might be wrong
+        A_a * (r - r_c - Delta) / Delta,
         1
     ]
 
     f_e = [
         0,          
         A_e * (r - r_c + Delta) / Delta,
-        (A_e - 1) * (r_c + Delta + 1 / A_a - r) / (Delta + Delta / A_a) + 1, 
+        (A_e - 1) * (r_c + Delta + Delta/A_a - r) / (Delta + Delta/A_a) + 1, 
         1
     ]
 
@@ -167,15 +170,13 @@ def simulate_trappist1(sim_id, file_path, planet_names, m_vals, m_star, r_vals, 
     sim.add(m=m_star, r=r_star)
     num_planets = len(m_vals)
     
-    # Initial semimajor axis of b
-    a_b = 0.05
-    
     # Define initial periods (P) and semimajor axes (a) 
-    P_vals = [(a_b**3 / m_star)**(1/2)]
+    P_vals = [((r_c+Delta+Delta/A_a)**3 / m_star)**(1/2) / 1.53 / 1.53] # for d to be at the disk edge (0.023)
     for i in range(num_planets-1):
         P_vals = np.append(P_vals, P_vals[i] * initial_P_ratios[i])
         
     a_vals = (P_vals**2 * m_star)**(1/3)
+    print(a_vals)
 
     # Add planets 
     for i in range(num_planets):
@@ -190,8 +191,9 @@ def simulate_trappist1(sim_id, file_path, planet_names, m_vals, m_star, r_vals, 
     mof = rebx.load_force("modify_orbits_forces")
     rebx.add_force(mof)
 
-    years = -get_taus(m_vals, a_vals, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim)[0][-1] # tau_a of the last planet
-    print(f"Sim ID: {sim_id:<2d} | years: {years:.3g}")
+    years = 1000
+    # years = get_taus(m_vals, a_vals, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim)[0][-1]) # tau_a of the last planet
+    print(f"Sim ID: {sim_id:<2d} | years: {years}")
     data, complete_sim = integrate_sim(sim, num_planets, planets, planet_names, m_vals, m_star, r_vals, r_c, Delta, A_a, A_e, C_e, tau_a_earth, Q_sim, years, start_time=0)
     
     # Save data
@@ -213,10 +215,10 @@ def simulate_trappist1(sim_id, file_path, planet_names, m_vals, m_star, r_vals, 
                         "integrator": integrator
                         })
         
-planet_names = ['b', 'c', 'd']
+planet_names = ['b', 'c', 'd', 'e']
 # Remember to change these before running each time
 dataset_id = 15
-n_sims = 50
+n_sims = 1
 
 def run_sim(sim_id):
     # Different rng for each sim
