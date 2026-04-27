@@ -1,16 +1,16 @@
 #!/bin/bash
 #SBATCH --job-name=trappist1_sims
 #SBATCH --output=sbatch_%a.out
-#SBATCH --time=05:00:00
+#SBATCH --time=10:00:00
 #SBATCH --partition=caslake
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=25
 #SBATCH --account=pi-fabrycky
 #SBATCH --mem-per-cpu=4G
 #SBATCH --array=15
 
 echo Script started.
 
-module load Anaconda3
+module avail Anaconda3
 
 echo Loaded Anaconda3.
 

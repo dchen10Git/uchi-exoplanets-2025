@@ -113,13 +113,8 @@ def integrate_sim(sim, planets, planet_names, parameters, years, start_time=0):
     sim.random_seed = 13741154 # for reproducibility
 
     completed_sim = True
-    
-    print("Integration starting")
 
     for i, t in enumerate(stage_times): 
-        if i % 1000 == 0:
-            print(f"{(i+1)*5}% complete")
-            
         sim.dt = planets[0].P / 20 # 1/20 of planet b
         sim.integrate(t)
         
@@ -226,23 +221,22 @@ def simulate_trappist1(sim_id, file_path, planet_names, parameters, integrator="
 
     years = -get_taus(ps[-1].a, parameters)[0][-1] # tau_a of the last planet
     years = 9e5 # roughly half of tau_1s
-    
+
     # failsafe
     if years < 1000:
         years = 1000
         
-    print(f"Sim ID: {sim_id:<2d} | years: {years:.3g}")
+    print(f"Integrating sim {sim_id:<2d} for {years:.3g} years", flush=True)
     data, complete_sim = integrate_sim(sim, planets, planet_names, parameters, years, start_time=0)
     
     # Save data
-    t1.save_simulation_run(data, sim_id, file_path, sim_metadata={
-                        "num_planets": num_planets, 
-                        "planet_names": planet_names} | parameters)
+    t1.save_simulation_run(data, sim_id, file_path, sim_metadata={"num_planets": num_planets, "planet_names": planet_names} | parameters)
         
 planet_names = ['b', 'c', 'd', 'e', 'f', 'g', 'h']
+
 # Remember to change these before running each time
 dataset_id = 15
-n_sims = 1
+n_sims = 50
 
 def run_sim(sim_id):
     # Different rng for each sim
@@ -283,7 +277,7 @@ if __name__ == "__main__":
     dataset_dir = Path.cwd().parent / "sim_results" / f"dataset{dataset_id}"
     
     # Create the folder
-    dataset_dir.mkdir(parents=True, exist_ok=True) # change to False to be safe
+    dataset_dir.mkdir(parents=True, exist_ok=False) # change to False to be safe
     print(f"Created directory: {dataset_dir}")
 
     print(f"Dataset: {dataset_id}")
@@ -292,11 +286,7 @@ if __name__ == "__main__":
     # Start a local Dask cluster
     n_cpus = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
     print(f"CPUs: {n_cpus}")
-    cluster = LocalCluster(
-        n_workers=n_cpus,
-        threads_per_worker=1,
-        processes=True
-    )    
+    cluster = LocalCluster()    
     client = Client(cluster)
     
     # print(f"Running sims on {len(client.scheduler_info()['workers'])} workers")
