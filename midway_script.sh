@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=25
 #SBATCH --account=pi-fabrycky
 #SBATCH --mem-per-cpu=4G
-#SBATCH --array=15
+#SBATCH --array=16
 
 echo Script started.
 

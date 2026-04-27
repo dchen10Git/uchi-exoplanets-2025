@@ -235,7 +235,7 @@ def simulate_trappist1(sim_id, file_path, planet_names, parameters, integrator="
 planet_names = ['b', 'c', 'd', 'e', 'f', 'g', 'h']
 
 # Remember to change these before running each time
-dataset_id = 15
+dataset_id = 16
 n_sims = 50
 
 def run_sim(sim_id):
@@ -251,7 +251,7 @@ def run_sim(sim_id):
     tau_a_earth = (sim_id//10)*1e3 + 1e4
     C_e = 0.1*sim_id + 0.1
     tau_1s = 1/(0.0054/tau_a_earth) # damping on c when in disk (positive so divergent)
-    tau_pl = 120e3 # planet formation interval time-scale
+    tau_pl = 140e3 # planet formation interval time-scale
         
     parameters = {"m_vals": m_vals,
                   "m_star": m_star,
