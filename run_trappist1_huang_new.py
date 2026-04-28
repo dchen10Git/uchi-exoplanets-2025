@@ -226,7 +226,7 @@ def simulate_trappist1(sim_id, file_path, planet_names, parameters, integrator="
     if years < 1000:
         years = 1000
         
-    print(f"Integrating sim {sim_id:<2d} for {years:.3g} years", flush=True)
+    print(f"Sim {sim_id:<2d} | {years:.3g} years | C_e {parameters["C_e"]} | A_a {parameters["A_a"]} | tau_pl {parameters["tau_pl"]} | tau_a_earth {parameters["tau_a_earth"]}", flush=True)
     data, complete_sim = integrate_sim(sim, planets, planet_names, parameters, years, start_time=0)
     
     # Save data
@@ -235,7 +235,9 @@ def simulate_trappist1(sim_id, file_path, planet_names, parameters, integrator="
 planet_names = ['b', 'c', 'd', 'e', 'f', 'g', 'h']
 
 # Remember to change these before running each time
-dataset_id = 20
+task_id = int(os.environ["SLURM_ARRAY_TASK_ID"]) # ids in array range
+print(f"Task {task_id}")
+dataset_id = task_id
 n_sims = 50
 
 def run_sim(sim_id):
@@ -249,8 +251,8 @@ def run_sim(sim_id):
     # Get random param values
     m_vals, r_vals, m_star, r_star, initial_P_ratios = generate_params(planet_names, rng)
     tau_a_earth = (sim_id % 10) * 2e3 + 6e3
-    C_e = 0.10
-    A_a = 150
+    C_e = (task_id % 2) * 0.05 + 0.05
+    A_a = 50 + (task_id % 3) * 50
     A_e = 1
     tau_1s = 1/(0.0054/tau_a_earth) # damping on c when in disk (positive so divergent)
     tau_pl = (sim_id // 10) * 20e3 + 80e3 # planet formation interval time-scale
