@@ -248,7 +248,7 @@ def run_sim(sim_id):
     
     # Get random param values
     m_vals, r_vals, m_star, r_star, initial_P_ratios = generate_params(planet_names, rng)
-    tau_a_earth = (sim_id % 10) * 2 + 6
+    tau_a_earth = (sim_id % 10) * 2e3 + 6e3
     C_e = 0.10
     A_a = 150
     A_e = 1
