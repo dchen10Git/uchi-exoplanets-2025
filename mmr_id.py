@@ -64,7 +64,7 @@ def last_P(m_star, b):
     '''Returns the period value given m_star and planet dateframe'''
     return float(b['a'].iloc[-1]**3 / m_star)**(1/2)
 
-def plot_libration(m_star, b, c, d=None, t_units='kyr', N=100):
+def plot_libration(m_star, b, c, d=None, t_units='kyr', N=100, forced_pq=None):
     b_name = b.attrs["planet_name"]
     c_name = c.attrs["planet_name"]
     times = b['time']
@@ -75,6 +75,10 @@ def plot_libration(m_star, b, c, d=None, t_units='kyr', N=100):
 
         # Calculate two-body resonant angle between b and c
         p, q = find_best_twoBR_pq(m_star, b, c)
+    
+        # If we want to analyze a period ratio that isn't the final configuration
+        if forced_pq: # should be a tuple
+            p, q = forced_pq
 
         assert p != 100 # if not, then the planets are definitely not in resonance
         print(f"p, q: {p}, {q}")
@@ -327,7 +331,6 @@ def detect_sequential_capture(saved_sim, N_window=100, amp_threshold=90):
         }
     
     return results
-
 
 def plot_sequential_capture(saved_sim, pair_idx=0, N_window=100):
     '''

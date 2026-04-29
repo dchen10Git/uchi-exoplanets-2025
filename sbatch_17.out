@@ -1,0 +1,65 @@
+Script started.
+Loaded Anaconda3.
+Environment activated.
+Task 17
+Created directory: /home/dchen10/sim_results/dataset17
+Dataset: 17
+CPUs: 25
+Task 17
+Sim 3  | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 80000.0 | tau_a_earth 12000.0
+Sim 8  | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 80000.0 | tau_a_earth 22000.0
+Sim 13 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 100000.0 | tau_a_earth 12000.0
+Sim 18 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 100000.0 | tau_a_earth 22000.0
+Sim 23 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 120000.0 | tau_a_earth 12000.0
+Sim 48 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 160000.0 | tau_a_earth 22000.0
+Sim 43 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 160000.0 | tau_a_earth 12000.0
+Sim 38 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 140000.0 | tau_a_earth 22000.0
+Sim 33 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 140000.0 | tau_a_earth 12000.0
+Sim 28 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 120000.0 | tau_a_earth 22000.0
+Task 17
+Sim 1  | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 80000.0 | tau_a_earth 8000.0
+Sim 6  | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 80000.0 | tau_a_earth 18000.0
+Sim 11 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 100000.0 | tau_a_earth 8000.0
+Sim 16 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 100000.0 | tau_a_earth 18000.0
+Sim 21 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 120000.0 | tau_a_earth 8000.0
+Sim 46 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 160000.0 | tau_a_earth 18000.0
+Sim 41 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 160000.0 | tau_a_earth 8000.0
+Sim 36 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 140000.0 | tau_a_earth 18000.0
+Sim 31 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 140000.0 | tau_a_earth 8000.0
+Sim 26 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 120000.0 | tau_a_earth 18000.0
+Task 17
+Sim 2  | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 80000.0 | tau_a_earth 10000.0
+Sim 7  | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 80000.0 | tau_a_earth 20000.0
+Sim 12 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 100000.0 | tau_a_earth 10000.0
+Sim 17 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 100000.0 | tau_a_earth 20000.0
+Sim 22 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 120000.0 | tau_a_earth 10000.0
+Sim 47 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 160000.0 | tau_a_earth 20000.0
+Sim 42 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 160000.0 | tau_a_earth 10000.0
+Sim 37 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 140000.0 | tau_a_earth 20000.0
+Sim 32 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 140000.0 | tau_a_earth 10000.0
+Sim 27 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 120000.0 | tau_a_earth 20000.0
+Task 17
+Sim 0  | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 80000.0 | tau_a_earth 6000.0
+Sim 5  | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 80000.0 | tau_a_earth 16000.0
+Sim 10 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 100000.0 | tau_a_earth 6000.0
+Sim 15 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 100000.0 | tau_a_earth 16000.0
+Sim 20 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 120000.0 | tau_a_earth 6000.0
+Sim 45 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 160000.0 | tau_a_earth 16000.0
+Sim 40 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 160000.0 | tau_a_earth 6000.0
+Sim 35 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 140000.0 | tau_a_earth 16000.0
+Sim 30 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 140000.0 | tau_a_earth 6000.0
+Sim 25 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 120000.0 | tau_a_earth 16000.0
+Task 17
+Sim 4  | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 80000.0 | tau_a_earth 14000.0
+Sim 9  | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 80000.0 | tau_a_earth 24000.0
+Sim 14 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 100000.0 | tau_a_earth 14000.0
+Sim 19 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 100000.0 | tau_a_earth 24000.0
+Sim 24 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 120000.0 | tau_a_earth 14000.0
+Sim 49 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 160000.0 | tau_a_earth 24000.0
+Sim 44 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 160000.0 | tau_a_earth 14000.0
+Sim 39 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 140000.0 | tau_a_earth 24000.0
+Sim 34 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 140000.0 | tau_a_earth 14000.0
+Sim 29 | 9e+05 years | C_e 0.1 | A_a 150 | tau_pl 120000.0 | tau_a_earth 24000.0
+Saved to ../sim_results/dataset17/outcomes.pkl
+Time elapsed: 21475.0 sec
+Finished running.
